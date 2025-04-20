@@ -1,12 +1,13 @@
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  databaseURL: "https://your-project-id-default-rtdb.firebaseio.com"
+  apiKey: "AIzaSyAgY2WQW00zlDVTAp9YVPbxFy_lU04iqTA",
+  authDomain: "ai-chatbot-a0107.firebaseapp.com",
+  databaseURL: "https://ai-chatbot-a0107-default-rtdb.firebaseio.com",
+  projectId: "ai-chatbot-a0107",
+  storageBucket: "ai-chatbot-a0107.firebasestorage.app",
+  messagingSenderId: "921898897940",
+  appId: "1:921898897940:web:5b6f59a47d9b46d7308d01",
+  measurementId: "G-J67DFPCXJC",
 };
 
 // Initialize Firebase
@@ -18,4 +19,4 @@ const db = firebase.firestore();
 const realtimeDb = firebase.database();
 
 // Export the auth and db references
-export { auth, db, realtimeDb }; 
+export { auth, db, realtimeDb };
