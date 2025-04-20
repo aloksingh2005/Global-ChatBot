@@ -4,13 +4,13 @@
     --text-color-light: white;
     --input-bg-light: rgba(255, 255, 255, 0.2);
     --container-bg-light: rgba(255, 255, 255, 0.1);
-    
+
     /* Dark mode variables */
     --bg-gradient-dark: linear-gradient(to bottom, #141e30, #243b55);
     --text-color-dark: #e0e0e0;
     --input-bg-dark: rgba(255, 255, 255, 0.1);
     --container-bg-dark: rgba(25, 25, 35, 0.6);
-    
+
     /* Default to light mode */
     --bg-gradient: var(--bg-gradient-light);
     --text-color: var(--text-color-light);
@@ -68,7 +68,8 @@ body {
     flex-grow: 1;
 }
 
-.network, .battery {
+.network,
+.battery {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -121,7 +122,7 @@ body {
     font-size: 12px;
 }
 
-.theme-switch input:checked + .slider {
+.theme-switch input:checked+.slider {
     transform: translateX(24px);
     background-color: #141e30;
     color: #f1c40f;
@@ -205,4 +206,110 @@ input::placeholder {
 
 .login-link a:hover {
     text-decoration: underline;
-} 
+}
+
+.login-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-top: 80px;
+}
+
+.login-container h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 32px;
+    font-weight: 600;
+}
+
+.signup-link {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.signup-link a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+.forgot-password {
+    text-align: right;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+
+.forgot-password a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.forgot-password a:hover {
+    text-decoration: underline;
+}
+
+.social-login {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.social-login p {
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.social-login p:before,
+.social-login p:after {
+    content: "";
+    position: absolute;
+    height: 1px;
+    width: 30%;
+    background-color: rgba(255, 255, 255, 0.3);
+    top: 50%;
+}
+
+.social-login p:before {
+    left: 0;
+}
+
+.social-login p:after {
+    right: 0;
+}
+
+.social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.social-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.social-icon:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.error-message {
+    color: #ff6b6b;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+    display: none;
+}

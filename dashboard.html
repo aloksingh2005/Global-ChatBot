@@ -1,660 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat App - Dashboard</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Lato&family=Montserrat&family=Nunito&family=Open+Sans&family=Poppins&family=Roboto&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Lato&family=Montserrat&family=Nunito&family=Open+Sans&family=Poppins&family=Roboto&display=swap"
+        rel="stylesheet">
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        :root {
-            /* Light mode variables */
-            --bg-color-light: #f2f2f2;
-            --card-bg-light: white;
-            --text-color-light: #333;
-            --secondary-text-light: #777;
-            --border-color-light: rgba(0, 0, 0, 0.1);
-            --hover-bg-light: rgba(0, 0, 0, 0.03);
-            
-            /* Dark mode variables */
-            --bg-color-dark: #1a1a2e;
-            --card-bg-dark: #242447;
-            --text-color-dark: #e0e0e0;
-            --secondary-text-dark: #a0a0a0;
-            --border-color-dark: rgba(255, 255, 255, 0.1);
-            --hover-bg-dark: rgba(255, 255, 255, 0.05);
-            
-            /* Default to light mode */
-            --bg-color: var(--bg-color-light);
-            --card-bg: var(--card-bg-light);
-            --text-color: var(--text-color-light);
-            --secondary-text: var(--secondary-text-light);
-            --border-color: var(--border-color-light);
-            --hover-bg: var(--hover-bg-light);
-        }
-        
-        /* Dark mode class */
-        body.dark-mode {
-            --bg-color: var(--bg-color-dark);
-            --card-bg: var(--card-bg-dark);
-            --text-color: var(--text-color-dark);
-            --secondary-text: var(--secondary-text-dark);
-            --border-color: var(--border-color-dark);
-            --hover-bg: var(--hover-bg-dark);
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        
-        body {
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 0;
-            color: var(--text-color);
-            position: relative;
-            height: 100vh;
-            width: 100%;
-            overflow: hidden;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            height: 100vh;
-            position: relative;
-        }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .header h1 {
-            font-size: 28px;
-            margin: 0;
-            font-style: italic;
-            text-align: center;
-            flex: 1;
-        }
-        
-        .menu-button {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--secondary-text);
-            font-size: 20px;
-            cursor: pointer;
-            border-radius: 50%;
-            transition: background-color 0.2s;
-        }
-        
-        .menu-button:hover {
-            background-color: rgba(0, 0, 0, 0.05);
-        }
-        
-        .chat-rooms {
-            background-color: var(--card-bg);
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
-        
-        .chat-room {
-            display: flex;
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            align-items: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .chat-room:hover {
-            background-color: var(--hover-bg);
-        }
-        
-        .chat-room:last-child {
-            border-bottom: none;
-        }
-        
-        .room-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: #2196F3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-right: 15px;
-            color: white;
-            font-size: 20px;
-        }
-        
-        .room-details {
-            flex: 1;
-        }
-        
-        .room-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-        
-        .room-name {
-            font-weight: bold;
-            font-size: 16px;
-        }
-        
-        .last-message-time {
-            font-size: 12px;
-            color: var(--secondary-text);
-        }
-        
-        .last-message {
-            display: flex;
-            font-size: 14px;
-            color: var(--secondary-text);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 300px;
-        }
-        
-        .message-sender {
-            font-weight: 500;
-            margin-right: 5px;
-        }
-        
-        .logout-btn {
-            margin-left: auto;
-        }
-        
-        .creator-tag {
-            text-align: center;
-            margin-top: 30px;
-            font-size: 14px;
-            color: var(--secondary-text);
-        }
-        
-        .creator-heart {
-            color: #ff3366;
-        }
-        
-        .theme-switch {
-            margin-left: 15px;
-        }
-        
-        .theme-switch label {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            width: 50px;
-            height: 26px;
-            background-color: rgba(0, 0, 0, 0.1);
-            border-radius: 100px;
-            position: relative;
-            transition: background-color 0.2s;
-            padding: 3px;
-        }
-        
-        .theme-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .theme-switch .switch-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        
-        .theme-switch input:checked + .switch-slider {
-            background-color: #2196F3;
-        }
-        
-        .theme-switch input:checked + .switch-slider:before {
-            transform: translateX(20px);
-        }
-        
-        .theme-switch input:checked + .switch-slider:after {
-            content: "ON";
-            left: 7px;
-            right: auto;
-        }
-        
-        .theme-switch .switch-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        .theme-switch .switch-slider:after {
-            position: absolute;
-            content: "OFF";
-            right: 5px;
-            bottom: 3px;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-        }
-        
-        /* Spinner animation for profile pic upload */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Side menu styles */
-        .side-menu {
-            position: fixed;
-            top: 0;
-            left: -280px;
-            width: 280px;
-            height: 100%;
-            background-color: var(--card-bg);
-            z-index: 1000;
-            transition: left 0.3s ease;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-        }
-        
-        .side-menu.active {
-            left: 0;
-        }
-        
-        .menu-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none;
-        }
-        
-        .menu-overlay.active {
-            display: block;
-        }
-        
-        .menu-header {
-            display: flex;
-            justify-content: flex-end;
-            padding: 15px;
-        }
-        
-        .menu-close {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            cursor: pointer;
-            color: var(--secondary-text);
-        }
-        
-        .menu-user-section {
-            padding: 20px;
-            text-align: center;
-        }
-        
-        .menu-user-avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background-color: #2196F3;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 36px;
-            margin: 0 auto 15px;
-            overflow: hidden;
-        }
-        
-        .menu-user-name {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-        
-        .menu-user-email {
-            font-size: 14px;
-            color: var(--secondary-text);
-        }
-        
-        .menu-divider {
-            height: 1px;
-            background-color: var(--border-color);
-            margin: 10px 0;
-        }
-        
-        .menu-item {
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .menu-item:hover {
-            background-color: var(--hover-bg);
-        }
-        
-        .menu-item i {
-            font-size: 20px;
-            width: 24px;
-            text-align: center;
-            color: var(--secondary-text);
-        }
-        
-        /* Font and color selection styles */
-        .accent-theme-options {
-            display: none;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            padding: 15px 20px;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        
-        .accent-theme-options.active {
-            display: grid;
-            max-height: 100px;
-        }
-        
-        .color-option {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        .color-option:hover {
-            transform: scale(1.1);
-        }
-        
-        .color-option.selected {
-            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2196F3;
-        }
-        
-        .font-settings-options {
-            padding: 5px 20px;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        
-        .font-settings-options.active {
-            max-height: 300px;
-        }
-        
-        .font-option {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            cursor: pointer;
-        }
-        
-        .font-radio {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid var(--secondary-text);
-            margin-right: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .font-radio .radio-inner {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: #2196F3;
-            display: none;
-        }
-        
-        .font-radio.selected {
-            border-color: #2196F3;
-        }
-        
-        .font-radio.selected .radio-inner {
-            display: block;
-        }
-        
-        /* Collapsible appearance section */
-        .menu-item {
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .appearance-arrow {
-            font-size: 12px;
-            transition: transform 0.3s;
-        }
-        
-        .appearance-arrow.active {
-            transform: rotate(180deg);
-        }
-        
-        .appearance-section {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        
-        .appearance-section.active {
-            max-height: 500px;
-        }
-        
-        /* Collapsible settings section */
-        .settings-section {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        
-        .settings-section.active {
-            max-height: 500px;
-        }
-        
-        .theme-toggle-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-        }
-        
-        .section-header {
-            padding: 0 20px;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--secondary-text);
-            margin: 10px 0;
-            letter-spacing: 0.5px;
-        }
-        
-        .logout-container {
-            margin-top: 20px;
-            margin-bottom: 5px;
-        }
-        
-        /* Spinner animation for profile pic upload */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 22px;
-        }
-        
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .switch-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        
-        .switch-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 2px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        .switch-slider:after {
-            position: absolute;
-            content: "OFF";
-            right: 5px;
-            bottom: 3px;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-        }
-        
-        input:checked + .switch-slider {
-            background-color: #2196F3;
-        }
-        
-        input:checked + .switch-slider:before {
-            transform: translateX(20px);
-        }
-        
-        input:checked + .switch-slider:after {
-            content: "ON";
-            left: 7px;
-            right: auto;
-        }
-        
-        /* Floating Action Button Style */
-        .floating-action-button {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: #2196F3;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            z-index: 100;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .floating-action-button::after {
-            content: "New Chat";
-            position: absolute;
-            right: 70px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s;
-        }
-        
-        .floating-action-button:hover::after {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .floating-action-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-        }
-        
-        .floating-action-button:active {
-            transform: scale(0.95);
-        }
-        
-        /* Room Icon Option Styles */
-        .room-icon-option {
-            transition: transform 0.2s, border-color 0.2s;
-        }
-        
-        .room-icon-option:hover {
-            transform: scale(1.1);
-        }
-        
-        .room-icon-option.selected {
-            border: 2px solid #2196F3 !important;
-        }
-        
-        .room-icon-option.selected i {
-            color: #2196F3 !important;
-        }
-    </style>
+
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -664,7 +27,7 @@
             <h1>Global Chat</h1>
             <div style="width: 40px;"></div> <!-- Empty div for balance -->
         </div>
-            
+
         <div class="chat-rooms" id="chat-rooms">
             <!-- Chat rooms will be loaded dynamically -->
             <div class="chat-room" id="global-chat-room" onclick="window.location.href='chat.html'">
@@ -675,109 +38,110 @@
                     <div class="room-header">
                         <div class="room-name">Global Chat</div>
                         <div class="last-message-time" id="global-last-time">Now</div>
-            </div>
+                    </div>
                     <div class="last-message">
                         <div class="message-sender" id="global-last-sender">System:</div>
                         <div id="global-last-message">Welcome to the global chat room!</div>
+                    </div>
                 </div>
             </div>
-                </div>
-                    </div>
-            
+        </div>
+
         <div class="creator-tag">
             Developed with <span class="creator-heart">❤</span> using Firebase
-                </div>
-                    </div>
-    
+        </div>
+    </div>
+
     <!-- Side Menu (replaces the user dropdown) -->
     <div class="side-menu" id="side-menu">
         <div class="menu-header">
             <div class="menu-close" id="menu-close">
                 <i class="fas fa-times"></i>
-                </div>
             </div>
-            
+        </div>
+
         <div class="menu-user-section">
             <div class="menu-user-avatar" id="profile-pic"></div>
             <div class="menu-user-name" id="username">Loading...</div>
             <div class="menu-user-email" id="user-email">loading@example.com</div>
-                </div>
-        
+        </div>
+
         <div class="menu-divider"></div>
-        
+
         <div class="menu-item" id="profile-settings">
             <i class="fas fa-user-cog"></i>
             Profile Settings
-                </div>
-        
+        </div>
+
         <!-- Settings menu item (now styled like Profile Settings) -->
         <div class="menu-item" id="settings-toggle">
             <i class="fas fa-cog"></i>
             Settings
-                </div>
-            
+        </div>
+
         <div class="settings-section" id="settings-section">
             <!-- APPEARANCE section -->
             <div class="section-header">APPEARANCE</div>
-            
+
             <div class="theme-toggle-container">
                 <div class="toggle-label">Dark Mode</div>
                 <label class="switch">
                     <input type="checkbox" id="theme-toggle">
                     <span class="switch-slider"></span>
                 </label>
-                </div>
-            
+            </div>
+
             <!-- Accent Theme Selection -->
             <div class="menu-item" id="accent-theme-toggle">
                 <i class="fas fa-palette"></i>
                 <span>Change Accent Theme</span>
-                </div>
-            
+            </div>
+
             <div class="accent-theme-options" id="accent-theme-options">
                 <div class="color-option" data-color="#2196F3" style="background-color: #2196F3;"></div>
-                <div class="color-option" data-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ddd;"></div>
+                <div class="color-option" data-color="#ffffff"
+                    style="background-color: #ffffff; border: 1px solid #ddd;"></div>
                 <div class="color-option" data-color="#9b9b9b" style="background-color: #9b9b9b;"></div>
                 <div class="color-option" data-color="#1a237e" style="background-color: #1a237e;"></div>
                 <div class="color-option" data-color="#1b5e20" style="background-color: #1b5e20;"></div>
                 <div class="color-option" data-color="#000000" style="background-color: #000000;"></div>
             </div>
-            
+
             <!-- Font Settings -->
             <div class="menu-item" id="font-settings-toggle">
                 <i class="fas fa-font"></i>
                 <span>Font Settings</span>
             </div>
-            
+
             <div class="font-settings-options" id="font-settings-options">
                 <div class="font-option" data-font="Poppins">
                     <div class="font-radio selected">
                         <div class="radio-inner"></div>
-                </div>
+                    </div>
                     <span style="font-family: 'Poppins', sans-serif;">Poppins</span>
-            </div>
+                </div>
                 <div class="font-option" data-font="Roboto">
                     <div class="font-radio">
                         <div class="radio-inner"></div>
-        </div>
+                    </div>
                     <span style="font-family: 'Roboto', sans-serif;">Roboto</span>
-    </div>
+                </div>
                 <div class="font-option" data-font="Lato">
                     <div class="font-radio">
                         <div class="radio-inner"></div>
-            </div>
+                    </div>
                     <span style="font-family: 'Lato', sans-serif;">Lato</span>
                 </div>
                 <div class="font-option" data-font="Montserrat">
                     <div class="font-radio">
                         <div class="radio-inner"></div>
-            </div>
+                    </div>
                     <span style="font-family: 'Montserrat', sans-serif;">Montserrat</span>
-        </div>
+                </div>
                 <div class="font-option" data-font="Nunito">
                     <div class="font-radio">
                         <div class="radio-inner"></div>
-        </div>
+                    </div>
                     <span style="font-family: 'Nunito', sans-serif;">Nunito</span>
                 </div>
                 <div class="font-option" data-font="Open Sans">
@@ -785,51 +149,56 @@
                         <div class="radio-inner"></div>
                     </div>
                     <span style="font-family: 'Open Sans', sans-serif;">Open Sans</span>
-                    </div>
                 </div>
             </div>
-        
+        </div>
+
         <div class="menu-divider"></div>
-        
+
         <div class="menu-item" id="about-funchat">
             <i class="fas fa-info-circle"></i>
             About Global Chat
         </div>
 
         <div class="menu-divider"></div>
-        
+
         <div class="menu-item" id="logout-btn">
             <i class="fas fa-sign-out-alt"></i>
             Logout
+        </div>
     </div>
-                </div>
     <div class="menu-overlay" id="menu-overlay"></div>
 
     <!-- Add the Profile Settings modal before closing body tag -->
-    <div id="profileSettingsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
-        <div style="background-color:var(--bg-color); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
+    <div id="profileSettingsModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
+        <div
+            style="background-color:var(--bg-color); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
                 <div style="font-size:22px; font-weight:bold;">Profile Settings</div>
                 <div id="closeProfileBtn" style="font-size:28px; cursor:pointer; color:var(--text-color);">×</div>
-                </div>
+            </div>
             <div style="padding:25px 20px;">
                 <!-- Profile Picture Section -->
                 <div style="margin-bottom:25px; display:flex; flex-direction:column; align-items:center;">
-                    <div id="profilePicContainer" style="width:100px; height:100px; border-radius:50%; background-color:#2196F3; color:white; display:flex; justify-content:center; align-items:center; font-size:36px; margin-bottom:10px; position:relative; overflow:hidden;">
+                    <div id="profilePicContainer"
+                        style="width:100px; height:100px; border-radius:50%; background-color:#2196F3; color:white; display:flex; justify-content:center; align-items:center; font-size:36px; margin-bottom:10px; position:relative; overflow:hidden;">
                         <!-- Will be populated with profile pic or initials -->
-            </div>
-                    <button id="changeProfilePicBtn" style="background-color:#2196F3; color:white; border:none; padding:8px 15px; border-radius:20px; cursor:pointer; display:inline-flex; align-items:center; margin-top:10px;">
+                    </div>
+                    <button id="changeProfilePicBtn"
+                        style="background-color:#2196F3; color:white; border:none; padding:8px 15px; border-radius:20px; cursor:pointer; display:inline-flex; align-items:center; margin-top:10px;">
                         <i class="fas fa-camera" style="margin-right:6px;"></i> Change Photo
-                </button>
+                    </button>
                     <input type="file" id="profilePicInput" style="display:none;" accept="image/*">
-    </div>
+                </div>
 
                 <div style="margin-bottom:30px; display:flex; align-items:center;">
                     <div style="width:40%; color:var(--text-color-dim); font-size:18px;">Username:</div>
                     <div id="displayUsername" style="flex:1; font-size:18px;"></div>
                     <div id="editUsernameBtn" style="color:#2196F3; cursor:pointer; margin-left:10px;">
                         <i class="fas fa-pencil-alt" style="font-size:20px;"></i>
-            </div>
+                    </div>
                 </div>
                 <div style="margin-bottom:10px; display:flex; align-items:center;">
                     <div style="width:40%; color:var(--text-color-dim); font-size:18px;">Email:</div>
@@ -837,7 +206,8 @@
                 </div>
             </div>
             <div style="padding:20px; text-align:right; border-top:1px solid var(--border-color);">
-                <button id="logoutProfileBtn" style="background-color:#e74c3c; color:white; border:none; padding:12px 25px; border-radius:30px; font-size:16px; cursor:pointer; display:inline-flex; align-items:center;">
+                <button id="logoutProfileBtn"
+                    style="background-color:#e74c3c; color:white; border:none; padding:12px 25px; border-radius:30px; font-size:16px; cursor:pointer; display:inline-flex; align-items:center;">
                     <i class="fas fa-sign-out-alt" style="margin-right:8px;"></i> Logout
                 </button>
             </div>
@@ -845,17 +215,21 @@
     </div>
 
     <!-- Add the About Global Chat Modal -->
-    <div id="aboutAIChatModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
-        <div style="background-color:var(--card-bg); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
+    <div id="aboutAIChatModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
+        <div
+            style="background-color:var(--card-bg); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
                 <div style="font-size:24px; font-weight:bold;">About Global Chat</div>
                 <div id="closeAboutBtn" style="font-size:28px; cursor:pointer; color:var(--text-color);">×</div>
             </div>
             <div style="padding:25px 20px; overflow-y:auto; max-height:70vh;">
                 <div style="margin-bottom:20px;">
-                    <span style="color:#2196F3; font-size:22px; font-weight:bold;">Global Chat</span> is a real-time chat application built using Firebase.
+                    <span style="color:#2196F3; font-size:22px; font-weight:bold;">Global Chat</span> is a real-time
+                    chat application built using Firebase.
                 </div>
-                
+
                 <div style="margin-bottom:20px;">
                     <div style="font-size:20px; margin-bottom:15px;">Features:</div>
                     <ul style="list-style-type:none; padding-left:10px;">
@@ -899,8 +273,8 @@
                             <i class="fas fa-circle" style="color:#2196F3; font-size:8px; margin:6px 10px 0 0;"></i>
                             <span>Pin Chats</span>
                         </li>
-                </ul>
-    </div>
+                    </ul>
+                </div>
 
                 <div style="text-align:center; margin-top:30px; color:var(--secondary-text);">
                     Developed by You.
@@ -915,863 +289,112 @@
     </div>
 
     <!-- Add Manage Rooms Modal -->
-    <div id="manageRoomsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
-        <div style="background-color:var(--card-bg); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
+    <div id="manageRoomsModal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
+        <div
+            style="background-color:var(--card-bg); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
                 <div style="font-size:24px; font-weight:bold;">Create New Chat Room</div>
                 <div id="closeManageRoomsBtn" style="font-size:28px; cursor:pointer; color:var(--text-color);">×</div>
             </div>
             <div style="padding:25px 20px; overflow-y:auto; max-height:70vh;">
                 <!-- Create New Room Section -->
-                <div style="margin-bottom:30px; background-color:rgba(33, 150, 243, 0.1); padding:20px; border-radius:10px; border-left:4px solid #2196F3;">
-                    <div style="font-size:20px; margin-bottom:15px; color:var(--text-color); font-weight:bold;">Create New Chat Room</div>
-                    <input type="text" id="newRoomName" placeholder="Enter Chat Room Name" style="width:100%; padding:15px; border-radius:10px; border:none; background-color:var(--bg-color); color:var(--text-color); margin-bottom:20px; font-size:16px;">
-                    
+                <div
+                    style="margin-bottom:30px; background-color:rgba(33, 150, 243, 0.1); padding:20px; border-radius:10px; border-left:4px solid #2196F3;">
+                    <div style="font-size:20px; margin-bottom:15px; color:var(--text-color); font-weight:bold;">Create
+                        New Chat Room</div>
+                    <input type="text" id="newRoomName" placeholder="Enter Chat Room Name"
+                        style="width:100%; padding:15px; border-radius:10px; border:none; background-color:var(--bg-color); color:var(--text-color); margin-bottom:20px; font-size:16px;">
+
                     <div style="font-size:18px; margin-bottom:15px; color:var(--text-color);">Select Room Icon</div>
                     <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; margin-bottom:20px;">
-                        <div class="room-icon-option" data-icon="fa-comments" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-comments"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-comments" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option selected" data-icon="fa-users" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer; border:2px solid #2196F3;">
+                        <div class="room-icon-option selected" data-icon="fa-users"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer; border:2px solid #2196F3;">
                             <i class="fas fa-users" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-gamepad" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-gamepad"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-gamepad" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-music" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-music"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-music" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-film" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-film"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-film" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-book" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-book"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-book" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-briefcase" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-briefcase"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-briefcase" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-code" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-code"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-code" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-futbol" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-futbol"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-futbol" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-anchor" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-anchor"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-anchor" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-coffee" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-coffee"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-coffee" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-heart" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-heart"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-heart" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-star" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-star"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-star" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-paw" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-paw"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-paw" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
-                        <div class="room-icon-option" data-icon="fa-tree" style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
+                        <div class="room-icon-option" data-icon="fa-tree"
+                            style="background-color:var(--bg-color); border-radius:10px; aspect-ratio:1; display:flex; justify-content:center; align-items:center; cursor:pointer;">
                             <i class="fas fa-tree" style="font-size:24px; color:var(--secondary-text);"></i>
                         </div>
                     </div>
-                    
-                    <button id="createRoomBtn" style="width:100%; background-color:#2196F3; color:white; border:none; border-radius:10px; padding:15px; font-size:16px; font-weight:bold; cursor:pointer;">Create & Join New Chat</button>
+
+                    <button id="createRoomBtn"
+                        style="width:100%; background-color:#2196F3; color:white; border:none; border-radius:10px; padding:15px; font-size:16px; font-weight:bold; cursor:pointer;">Create
+                        & Join New Chat</button>
                 </div>
-                
+
                 <div style="height:1px; background-color:var(--border-color); margin:30px 0;"></div>
-                
+
                 <!-- Join Room by ID Section -->
                 <div>
-                    <div style="font-size:18px; margin-bottom:15px; color:var(--text-color);">Join Existing Chat by ID</div>
-                    <input type="text" id="roomIdInput" placeholder="Paste Chat Room ID here" style="width:100%; padding:15px; border-radius:10px; border:none; background-color:var(--bg-color); color:var(--text-color); margin-bottom:20px; font-size:16px;">
-                    <button id="joinRoomBtn" style="width:100%; background-color:#2196F3; color:white; border:none; border-radius:10px; padding:15px; font-size:16px; font-weight:bold; cursor:pointer;">Join Chat Room</button>
+                    <div style="font-size:18px; margin-bottom:15px; color:var(--text-color);">Join Existing Chat by ID
+                    </div>
+                    <input type="text" id="roomIdInput" placeholder="Paste Chat Room ID here"
+                        style="width:100%; padding:15px; border-radius:10px; border:none; background-color:var(--bg-color); color:var(--text-color); margin-bottom:20px; font-size:16px;">
+                    <button id="joinRoomBtn"
+                        style="width:100%; background-color:#2196F3; color:white; border:none; border-radius:10px; padding:15px; font-size:16px; font-weight:bold; cursor:pointer;">Join
+                        Chat Room</button>
                 </div>
             </div>
         </div>
     </div>
+    
+    <script src="/js/dashboard.js"></script>
 
-    <script>
-        // Firebase configuration
-        const firebaseConfig = {
-          apiKey: "AIzaSyAgY2WQW00zlDVTAp9YVPbxFy_lU04iqTA",
-          authDomain: "ai-chatbot-a0107.firebaseapp.com",
-          databaseURL: "https://ai-chatbot-a0107-default-rtdb.firebaseio.com",
-          projectId: "ai-chatbot-a0107",
-          storageBucket: "ai-chatbot-a0107.firebasestorage.app",
-          messagingSenderId: "921898897940",
-          appId: "1:921898897940:web:5b6f59a47d9b46d7308d01",
-          measurementId: "G-J67DFPCXJC"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-        const realtimeDb = firebase.database();
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            // Get DOM elements for menu
-            const menuButton = document.getElementById('menu-button');
-            const sideMenu = document.getElementById('side-menu');
-            const menuOverlay = document.getElementById('menu-overlay');
-            const menuClose = document.getElementById('menu-close');
-            const profilePic = document.getElementById('profile-pic');
-            const usernameEl = document.getElementById('username');
-            const userEmailEl = document.getElementById('user-email');
-            const logoutBtn = document.getElementById('logout-btn');
-            const profileSettings = document.getElementById('profile-settings');
-            const themeToggle = document.getElementById('theme-toggle');
-            const chatRoomsContainer = document.getElementById('chat-rooms');
-            const globalLastTime = document.getElementById('global-last-time');
-            const globalLastSender = document.getElementById('global-last-sender');
-            const globalLastMessage = document.getElementById('global-last-message');
-            const aboutFunChat = document.getElementById('about-funchat');
-            const accentThemeToggle = document.getElementById('accent-theme-toggle');
-            const accentThemeOptions = document.getElementById('accent-theme-options');
-            const colorOptions = document.querySelectorAll('.color-option');
-            const fontSettingsToggle = document.getElementById('font-settings-toggle');
-            const fontSettingsOptions = document.getElementById('font-settings-options');
-            const fontOptions = document.querySelectorAll('.font-option');
-            const settingsToggle = document.getElementById('settings-toggle');
-            const settingsSection = document.getElementById('settings-section');
-            
-            let currentUser = null;
-            
-            // Check if user is logged in
-            auth.onAuthStateChanged(user => {
-                if (user) {
-                    currentUser = user;
-                    // Update UI with user info
-                    updateUserInfo(user);
-                    // Load chat rooms
-                    loadChatRooms();
-                    // Load global chat last message
-                    loadGlobalChatLastMessage();
-                } else {
-                    // Redirect to login if not authenticated
-                    window.location.href = 'login.html';
-                }
-            });
-            
-            // Update user info in UI
-            function updateUserInfo(user) {
-                // Set username and email
-                usernameEl.textContent = user.displayName || 'User';
-                userEmailEl.textContent = user.email || '';
-                
-                // Set profile pic
-                if (user.photoURL) {
-                    profilePic.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName}" style="width:100%;height:100%;border-radius:50%;">`;
-                } else {
-                    // Use first letter of display name as avatar
-                    const initials = (user.displayName || 'User').charAt(0).toUpperCase();
-                    profilePic.textContent = initials;
-                }
-            }
-            
-            // Load chat rooms
-            function loadChatRooms() {
-                // In a real app, you would fetch user's chat rooms from Firestore
-                // For now, we'll just display the global chat
-                
-                // You can add code here to fetch and display user's personal chats
-                db.collection('users').doc(currentUser.uid).collection('chats')
-                    .orderBy('lastMessageTime', 'desc')
-                    .get()
-                    .then(snapshot => {
-                        if (!snapshot.empty) {
-                            snapshot.forEach(doc => {
-                                const chatData = doc.data();
-                                addChatRoomToUI(doc.id, chatData);
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error loading chat rooms: ", error);
-                    });
-            }
-            
-            // Add a chat room to UI
-            function addChatRoomToUI(id, data) {
-                const roomElement = document.createElement('div');
-                roomElement.className = 'chat-room';
-                roomElement.setAttribute('data-id', id);
-                roomElement.addEventListener('click', () => {
-                    window.location.href = `chat.html?id=${id}`;
-                });
-                
-                // Format timestamp
-                let timeString = 'Now';
-                if (data.lastMessageTime) {
-                    const timestamp = data.lastMessageTime.toDate();
-                    const now = new Date();
-                    const diffDays = Math.floor((now - timestamp) / (1000 * 60 * 60 * 24));
-                    
-                    if (diffDays === 0) {
-                        timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    } else if (diffDays === 1) {
-                        timeString = 'Yesterday';
-                } else {
-                        timeString = timestamp.toLocaleDateString();
-                    }
-                }
-                
-                roomElement.innerHTML = `
-                    <div class="room-avatar">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="room-details">
-                        <div class="room-header">
-                            <div class="room-name">${data.name}</div>
-                            <div class="last-message-time">${timeString}</div>
-                        </div>
-                        <div class="last-message">
-                            <div class="message-sender">${data.lastMessageSender || 'System'}:</div>
-                            <div>${data.lastMessageText || 'No messages yet'}</div>
-                        </div>
-                    </div>
-                `;
-                
-                chatRoomsContainer.appendChild(roomElement);
-            }
-            
-            // Load last message in global chat
-            function loadGlobalChatLastMessage() {
-                realtimeDb.ref('messages').orderByChild('timestamp').limitToLast(1).on('value', snapshot => {
-                    if (snapshot.exists()) {
-                        snapshot.forEach(childSnapshot => {
-                            const message = childSnapshot.val();
-                            
-                            // Format timestamp
-                            let timeString = 'Now';
-                            if (message.timestamp) {
-                                const timestamp = new Date(message.timestamp);
-                                const now = new Date();
-                                const diffMs = now - timestamp;
-                                const diffMins = Math.floor(diffMs / (1000 * 60));
-                                
-                                if (diffMins < 1) {
-                                    timeString = 'Now';
-                                } else if (diffMins < 60) {
-                                    timeString = `${diffMins}m ago`;
-                } else {
-                                    const diffHours = Math.floor(diffMins / 60);
-                                    if (diffHours < 24) {
-                                        timeString = `${diffHours}h ago`;
-                                    } else {
-                                        timeString = timestamp.toLocaleDateString();
-                                    }
-                                }
-                            }
-                            
-                            // Update UI
-                            globalLastTime.textContent = timeString;
-                            globalLastSender.textContent = message.displayName || 'Anonymous';
-                            globalLastMessage.textContent = message.message;
-                        });
-                    }
-                });
-            }
-            
-            // Toggle menu
-            menuButton.addEventListener('click', () => {
-                sideMenu.classList.add('active');
-                menuOverlay.classList.add('active');
-            });
-            
-            menuClose.addEventListener('click', () => {
-                sideMenu.classList.remove('active');
-                menuOverlay.classList.remove('active');
-            });
-            
-            menuOverlay.addEventListener('click', () => {
-                sideMenu.classList.remove('active');
-                menuOverlay.classList.remove('active');
-            });
-            
-            // Logout handler
-            function handleLogout() {
-                auth.signOut().then(() => {
-                    window.location.href = 'login.html';
-                }).catch(error => {
-                    console.error("Error signing out: ", error);
-                });
-            }
-            
-            logoutBtn.addEventListener('click', handleLogout);
-            
-            // Profile settings handler
-            profileSettings.addEventListener('click', () => {
-                // First close the side menu
-                sideMenu.classList.remove('active');
-                menuOverlay.classList.remove('active');
-                
-                // Only proceed if user is logged in
-                if (currentUser) {
-                    // Update profile data in modal
-                    displayUsername.textContent = currentUser.displayName || 'User';
-                    displayEmail.textContent = currentUser.email || '';
-                    
-                    // Update profile picture
-                    updateProfilePicInModal();
-                    
-                    // Show the modal
-                    profileSettingsModal.style.display = 'flex';
-                    profileSettingsModal.style.opacity = '1';
-                    profileSettingsModal.style.pointerEvents = 'auto';
-                }
-            });
-            
-            // Simple Profile Settings Modal Functions
-            const profileSettingsModal = document.getElementById('profileSettingsModal');
-            const closeProfileBtn = document.getElementById('closeProfileBtn');
-            const displayUsername = document.getElementById('displayUsername');
-            const displayEmail = document.getElementById('displayEmail');
-            const editUsernameBtn = document.getElementById('editUsernameBtn');
-            const logoutProfileBtn = document.getElementById('logoutProfileBtn');
-            const profilePicContainer = document.getElementById('profilePicContainer');
-            const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
-            const profilePicInput = document.getElementById('profilePicInput');
-            
-            // Update profile picture in the modal
-            function updateProfilePicInModal() {
-                if (currentUser.photoURL) {
-                    profilePicContainer.innerHTML = `<img src="${currentUser.photoURL}" alt="${currentUser.displayName}" style="width:100%; height:100%; object-fit:cover;">`;
-                } else {
-                    // Use first letter of display name as avatar
-                    const initials = (currentUser.displayName || 'User').charAt(0).toUpperCase();
-                    profilePicContainer.innerHTML = initials;
-                }
-            }
-            
-            // Handle profile picture change
-            changeProfilePicBtn.addEventListener('click', () => {
-                profilePicInput.click();
-            });
-            
-            profilePicInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    // Create storage reference
-                    const storageRef = firebase.storage().ref();
-                    const profilePicRef = storageRef.child(`profile_pics/${currentUser.uid}`);
-                    
-                    // Show loading state
-                    profilePicContainer.innerHTML = `<div class="spinner" style="border:3px solid rgba(255,255,255,0.3); border-radius:50%; border-top:3px solid white; width:30px; height:30px; animation:spin 1s linear infinite;"></div>`;
-                    
-                    // Upload file
-                    profilePicRef.put(file).then(snapshot => {
-                        return snapshot.ref.getDownloadURL();
-                    }).then(downloadURL => {
-                        // Update profile
-                        return currentUser.updateProfile({
-                            photoURL: downloadURL
-                        });
-                    }).then(() => {
-                        // Update UI
-                        updateProfilePicInModal();
-                        updateUserInfo(currentUser);
-                        
-                        // Show success notification
-                        alert('Profile picture updated successfully!');
-                    }).catch(error => {
-                        console.error('Error updating profile picture:', error);
-                        alert('Failed to update profile picture. Please try again.');
-                        updateProfilePicInModal();
-                    });
-                }
-            });
-            
-            // Close profile modal when clicking the X button
-            if (closeProfileBtn) {
-                closeProfileBtn.addEventListener('click', () => {
-                    closeProfileModal();
-                });
-            }
-            
-            // Close profile modal when clicking outside the modal
-            if (profileSettingsModal) {
-                profileSettingsModal.addEventListener('click', (e) => {
-                    if (e.target === profileSettingsModal) {
-                        closeProfileModal();
-                    }
-                });
-            }
-            
-            // Function to close the profile modal with animation
-            function closeProfileModal() {
-                profileSettingsModal.style.opacity = '0';
-                setTimeout(() => {
-                profileSettingsModal.style.display = 'none';
-                    profileSettingsModal.style.pointerEvents = 'none';
-                }, 300);
-            }
-            
-            // Edit username when clicking the edit button
-            if (editUsernameBtn) {
-                editUsernameBtn.addEventListener('click', () => {
-                    const newUsername = prompt('Enter new username:', currentUser.displayName);
-                    
-                    if (newUsername && newUsername.trim() !== '') {
-                        // Update username in Firebase
-                        currentUser.updateProfile({
-                            displayName: newUsername
-                        }).then(() => {
-                            // Update UI in real-time
-                            displayUsername.textContent = newUsername;
-                            usernameEl.textContent = newUsername;
-                            
-                            // Show success notification
-                            alert('Username updated successfully!');
-                        }).catch(error => {
-                            console.error('Error updating username:', error);
-                            alert('Failed to update username. Please try again.');
-                        });
-                    }
-                });
-            }
-            
-            // Logout when clicking the logout button in profile modal
-            if (logoutProfileBtn) {
-                logoutProfileBtn.addEventListener('click', handleLogout);
-            }
-            
-            // Check if user previously selected dark mode
-            if (localStorage.getItem('darkMode') === 'enabled') {
-                document.body.classList.add('dark-mode');
-                themeToggle.checked = true;
-            }
-            
-            themeToggle.addEventListener('change', function() {
-                if (this.checked) {
-                    document.body.classList.add('dark-mode');
-                    localStorage.setItem('darkMode', 'enabled');
-                } else {
-                    document.body.classList.remove('dark-mode');
-                    localStorage.setItem('darkMode', 'disabled');
-                }
-            });
-            
-            // Handle clicks on other menu items
-            aboutFunChat.addEventListener('click', () => {
-                // First close the side menu
-                sideMenu.classList.remove('active');
-                menuOverlay.classList.remove('active');
-                
-                // Show the About modal
-                aboutAIChatModal.style.display = 'flex';
-                aboutAIChatModal.style.opacity = '1';
-                aboutAIChatModal.style.pointerEvents = 'auto';
-            });
-            
-            // Toggle settings section
-            settingsToggle.addEventListener('click', () => {
-                settingsSection.classList.toggle('active');
-            });
-            
-            // Make sure accent theme options are not active by default
-            accentThemeOptions.classList.remove('active');
-            
-            // Toggle accent theme options
-            accentThemeToggle.addEventListener('click', () => {
-                accentThemeOptions.classList.toggle('active');
-                // Close font settings if open
-                fontSettingsOptions.classList.remove('active');
-            });
-            
-            // Toggle font settings options
-            fontSettingsToggle.addEventListener('click', () => {
-                fontSettingsOptions.classList.toggle('active');
-                // Close accent theme if open
-                accentThemeOptions.classList.remove('active');
-            });
-            
-            // Handle color selection
-            colorOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    // Remove selected class from all options
-                    colorOptions.forEach(opt => opt.classList.remove('selected'));
-                    // Add selected class to clicked option
-                    option.classList.add('selected');
-                    
-                    // Get selected color
-                    const color = option.getAttribute('data-color');
-                    
-                    // Save to localStorage
-                    localStorage.setItem('accentColor', color);
-                    
-                    // Apply to UI elements
-                    applyAccentColor(color);
-                    
-                    // Close the color options dropdown after selection
-                    setTimeout(() => {
-                        accentThemeOptions.classList.remove('active');
-                    }, 300);
-                });
-            });
-            
-            // Apply accent color to UI elements
-            function applyAccentColor(color) {
-                document.documentElement.style.setProperty('--accent-color', color);
-                
-                // Apply color to interactive elements
-                const buttons = document.querySelectorAll('.btn-primary, .send-btn');
-                buttons.forEach(btn => {
-                    btn.style.backgroundColor = color;
-                });
-                
-                // Apply to other elements that need accent color
-                const accentElements = document.querySelectorAll('.active-tab, .radio-inner, .room-avatar, .menu-user-avatar, .chat-avatar');
-                accentElements.forEach(el => {
-                    el.style.backgroundColor = color;
-                    if (color === '#ffffff') {
-                        el.style.color = '#333'; // Dark text for white background
-                } else {
-                        el.style.color = 'white'; // White text for colored backgrounds
-                    }
-                });
-                
-                // Apply to border elements
-                const borderElements = document.querySelectorAll('.font-radio.selected');
-                borderElements.forEach(el => {
-                    el.style.borderColor = color;
-                });
-                
-                // For message bubbles in chat
-                if (document.querySelector('.my-message .message-bubble')) {
-                    const myMessageBubbles = document.querySelectorAll('.my-message .message-bubble');
-                    myMessageBubbles.forEach(bubble => {
-                        bubble.style.backgroundColor = color === '#ffffff' ? '#dcf8c6' : color;
-                        bubble.style.color = color === '#ffffff' || color === '#dcf8c6' ? '#333' : 'white';
-                    });
-                }
-            }
-            
-            // Handle font selection
-            fontOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    // Remove selected class from all options
-                    fontOptions.forEach(opt => {
-                        opt.querySelector('.font-radio').classList.remove('selected');
-                    });
-                    
-                    // Add selected class to clicked option
-                    option.querySelector('.font-radio').classList.add('selected');
-                    
-                    // Get selected font
-                    const font = option.getAttribute('data-font');
-                    
-                    // Save to localStorage
-                    localStorage.setItem('selectedFont', font);
-                    
-                    // Apply to body and all text elements
-                    applyFont(font);
-                });
-            });
-            
-            // Apply font to the entire app
-            function applyFont(font) {
-                document.body.style.fontFamily = `'${font}', sans-serif`;
-                
-                // Also apply to all text elements for consistency
-                const textElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, button, input, textarea, a, div');
-                textElements.forEach(el => {
-                    el.style.fontFamily = `'${font}', sans-serif`;
-                });
-            }
-            
-            // Load saved settings
-            function loadSavedSettings() {
-                // Load accent color
-                const savedColor = localStorage.getItem('accentColor');
-                if (savedColor) {
-                    // Mark the correct color as selected
-                    colorOptions.forEach(opt => {
-                        if (opt.getAttribute('data-color') === savedColor) {
-                            opt.classList.add('selected');
-                        }
-                    });
-                    // Apply the color
-                    applyAccentColor(savedColor);
-                } else {
-                    // Default is the first color
-                    colorOptions[0].classList.add('selected');
-                    applyAccentColor(colorOptions[0].getAttribute('data-color'));
-                }
-                
-                // Load font
-                const savedFont = localStorage.getItem('selectedFont');
-                if (savedFont) {
-                    // Mark the correct font as selected
-                    fontOptions.forEach(opt => {
-                        if (opt.getAttribute('data-font') === savedFont) {
-                            opt.querySelector('.font-radio').classList.add('selected');
-                        }
-                    });
-                    // Apply the font
-                    applyFont(savedFont);
-                } else {
-                    // Default is the first font (Poppins)
-                    fontOptions[0].querySelector('.font-radio').classList.add('selected');
-                    applyFont(fontOptions[0].getAttribute('data-font'));
-                }
-            }
-            
-            // Load saved settings when the page loads
-            loadSavedSettings();
 
-            // About Global Chat Modal functionality
-            const aboutAIChatModal = document.getElementById('aboutAIChatModal');
-            const closeAboutBtn = document.getElementById('closeAboutBtn');
-            
-            // Close About modal when clicking the X button
-            if (closeAboutBtn) {
-                closeAboutBtn.addEventListener('click', () => {
-                    closeAboutModal();
-                });
-            }
-            
-            // Close About modal when clicking outside the modal
-            if (aboutAIChatModal) {
-                aboutAIChatModal.addEventListener('click', (e) => {
-                    if (e.target === aboutAIChatModal) {
-                        closeAboutModal();
-                    }
-                });
-            }
-            
-            // Function to close the About modal with animation
-            function closeAboutModal() {
-                aboutAIChatModal.style.opacity = '0';
-                setTimeout(() => {
-                    aboutAIChatModal.style.display = 'none';
-                    aboutAIChatModal.style.pointerEvents = 'none';
-                }, 300);
-            }
-
-            // Manage Rooms Modal
-            const createRoomFab = document.getElementById('create-room-fab');
-            const manageRoomsModal = document.getElementById('manageRoomsModal');
-            const closeManageRoomsBtn = document.getElementById('closeManageRoomsBtn');
-            const roomIconOptions = document.querySelectorAll('.room-icon-option');
-            const createRoomBtn = document.getElementById('createRoomBtn');
-            const joinRoomBtn = document.getElementById('joinRoomBtn');
-            const newRoomNameInput = document.getElementById('newRoomName');
-            const roomIdInput = document.getElementById('roomIdInput');
-            
-            let selectedRoomIcon = 'fa-users'; // Default icon
-            
-            // Show manage rooms modal when clicking the FAB
-            if (createRoomFab) {
-                createRoomFab.addEventListener('click', () => {
-                    manageRoomsModal.style.display = 'flex';
-                    manageRoomsModal.style.opacity = '1';
-                    manageRoomsModal.style.pointerEvents = 'auto';
-                });
-            }
-            
-            // Close manage rooms modal when clicking the X button
-            if (closeManageRoomsBtn) {
-                closeManageRoomsBtn.addEventListener('click', () => {
-                    closeManageRoomsModal();
-                });
-            }
-            
-            // Close manage rooms modal when clicking outside the modal
-            if (manageRoomsModal) {
-                manageRoomsModal.addEventListener('click', (e) => {
-                    if (e.target === manageRoomsModal) {
-                        closeManageRoomsModal();
-                    }
-                });
-            }
-            
-            // Select room icon
-            roomIconOptions.forEach(option => {
-                option.addEventListener('click', () => {
-                    // Remove selected class from all options
-                    roomIconOptions.forEach(opt => opt.classList.remove('selected'));
-                    // Add selected class to clicked option
-                    option.classList.add('selected');
-                    // Save selected icon
-                    selectedRoomIcon = option.getAttribute('data-icon');
-                });
-            });
-            
-            // Create room button handler
-            if (createRoomBtn) {
-                createRoomBtn.addEventListener('click', () => {
-                    const roomName = newRoomNameInput.value.trim();
-                    if (roomName.length < 3) {
-                        alert('Room name must be at least 3 characters long.');
-                        return;
-                    }
-                    
-                    createNewRoom(roomName, selectedRoomIcon);
-                });
-            }
-            
-            // Join room button handler
-            if (joinRoomBtn) {
-                joinRoomBtn.addEventListener('click', () => {
-                    const roomId = roomIdInput.value.trim();
-                    if (!roomId) {
-                        alert('Please enter a valid Room ID.');
-                        return;
-                    }
-                    
-                    joinRoomById(roomId);
-                });
-            }
-            
-            // Function to close the manage rooms modal with animation
-            function closeManageRoomsModal() {
-                manageRoomsModal.style.opacity = '0';
-                setTimeout(() => {
-                    manageRoomsModal.style.display = 'none';
-                    manageRoomsModal.style.pointerEvents = 'none';
-                }, 300);
-            }
-            
-            // Function to create a new room
-            function createNewRoom(name, icon) {
-                // Only proceed if user is logged in
-                if (!currentUser) {
-                    alert('You must be logged in to create a room.');
-                    return;
-                }
-                
-                // Create new room document in Firestore
-                db.collection('rooms').add({
-                    name: name,
-                    icon: icon,
-                    createdBy: currentUser.uid,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    members: [currentUser.uid],
-                    admins: [currentUser.uid]
-                })
-                .then(docRef => {
-                    // Add room to user's rooms
-                    return db.collection('users').doc(currentUser.uid).collection('rooms').doc(docRef.id).set({
-                        joined: firebase.firestore.FieldValue.serverTimestamp(),
-                        isAdmin: true,
-                        unreadCount: 0
-                    })
-                    .then(() => {
-                        // Create welcome message in realtime database
-                        return realtimeDb.ref(`room_messages/${docRef.id}`).push({
-                            type: 'system',
-                            message: `Welcome to ${name}! This room was created by ${currentUser.displayName || 'Anonymous'}.`,
-                            timestamp: firebase.database.ServerValue.TIMESTAMP
-                        });
-                    })
-                    .then(() => {
-                        // Show more detailed alert with room ID to help user find it later if needed
-                        alert(`Room "${name}" created successfully! Room ID: ${docRef.id}\nYou will now be redirected to the chat room.`);
-                        
-                        // Close modal
-                        closeManageRoomsModal();
-                        
-                        // Clear input
-                        newRoomNameInput.value = '';
-                        
-                        // Add the room to the UI before redirecting
-                        addChatRoomToUI(docRef.id, {
-                            name: name,
-                            lastMessageSender: 'System',
-                            lastMessageText: `Welcome to ${name}!`,
-                            lastMessageTime: firebase.firestore.Timestamp.now()
-                        });
-                        
-                        // Redirect to the new room with proper parameter
-                        const chatUrl = `chat.html?room=${docRef.id}`;
-                        console.log('Redirecting to:', chatUrl);
-                        setTimeout(() => {
-                            window.location.href = chatUrl;
-                        }, 500); // Short delay to ensure the alert is seen
-                    });
-                })
-                .catch(error => {
-                    console.error('Error creating room:', error);
-                    alert('Failed to create room. Please try again.');
-                });
-            }
-            
-            // Function to join a room by ID
-            function joinRoomById(roomId) {
-                // Only proceed if user is logged in
-                if (!currentUser) {
-                    alert('You must be logged in to join a room.');
-                    return;
-                }
-                
-                // Check if room exists
-                db.collection('rooms').doc(roomId).get()
-                    .then(doc => {
-                        if (!doc.exists) {
-                            alert('Room not found. Please check the ID and try again.');
-                            return;
-                        }
-                        
-                        const roomData = doc.data();
-                        
-                        // Check if user is already a member
-                        if (roomData.members && roomData.members.includes(currentUser.uid)) {
-                            // User is already a member, just redirect
-                            window.location.href = `chat.html?room=${roomId}`;
-                            return;
-                        }
-                        
-                        // Add user to room members
-                        return db.collection('rooms').doc(roomId).update({
-                            members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-                        })
-                        .then(() => {
-                            // Add room to user's rooms
-                            return db.collection('users').doc(currentUser.uid).collection('rooms').doc(roomId).set({
-                                joined: firebase.firestore.FieldValue.serverTimestamp(),
-                                isAdmin: false,
-                                unreadCount: 0
-                            });
-                        })
-                        .then(() => {
-                            // Add system message about new member
-                            return realtimeDb.ref(`room_messages/${roomId}`).push({
-                                type: 'system',
-                                message: `${currentUser.displayName || 'Anonymous'} joined the room.`,
-                                timestamp: firebase.database.ServerValue.TIMESTAMP
-                            });
-                        })
-                        .then(() => {
-                            alert(`You have joined "${roomData.name}"!`);
-                            // Close modal
-                            closeManageRoomsModal();
-                            // Clear input
-                            roomIdInput.value = '';
-                            // Redirect to the room
-                            window.location.href = `chat.html?room=${roomId}`;
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error joining room:', error);
-                        alert('Failed to join room. Please try again.');
-                    });
-            }
-            
-            // Allow enter key to create/join room
-            newRoomNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    createRoomBtn.click();
-                }
-            });
-            
-            roomIdInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    joinRoomBtn.click();
-                }
-            });
-        });
-    </script>
 </body>
-</html> 
+
+</html>
