@@ -1,4 +1,4 @@
-# AI Chat App
+# Global Chat App
 
 A modern mobile-friendly chat application with beautiful UI and user authentication.
 

@@ -879,7 +879,7 @@
             <i class="fas fa-arrow-left"></i>
         </div>
         <div class="chat-info" style="font-family: Montserrat, sans-serif;">
-            <h3 style="font-family: Montserrat, sans-serif;">AI Chat</h3>
+            <h3 style="font-family: Montserrat, sans-serif;">Global Chat</h3>
             <span class="online-count" style="font-family: Montserrat, sans-serif;" id="online-users-display"></span>
             </div>
         <div style="width: 40px;"></div> <!-- Empty div for balance -->
@@ -982,7 +982,7 @@
         </div>
         <div class="menu-item" id="about-funchat">
             <i class="fas fa-info-circle"></i>
-            About AI Chat
+            About Global Chat
         </div>
         <div class="menu-item" id="return-dashboard">
             <i class="fas fa-th-large"></i>
@@ -1092,16 +1092,16 @@
         </div>
     </div>
 
-    <!-- Add the About AI Chat Modal -->
+    <!-- Add the About Global Chat Modal -->
     <div id="aboutAIChatModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s; pointer-events:none;">
         <div style="background-color:var(--header-bg); color:var(--text-color); border-radius:15px; width:90%; max-width:500px; overflow:hidden; box-shadow:0 5px 20px rgba(0,0,0,0.3);">
             <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid var(--border-color);">
-                <div style="font-size:24px; font-weight:bold;">About AI Chat</div>
+                <div style="font-size:24px; font-weight:bold;">About Global Chat</div>
                 <div id="closeAboutBtn" style="font-size:28px; cursor:pointer; color:var(--text-color);">×</div>
             </div>
             <div style="padding:25px 20px; overflow-y:auto; max-height:70vh;">
                 <div style="margin-bottom:20px;">
-                    <span style="color:#2196F3; font-size:22px; font-weight:bold;">AI Chat</span> is a real-time chat application built using Firebase.
+                    <span style="color:#2196F3; font-size:22px; font-weight:bold;">Global Chat</span> is a real-time chat application built using Firebase.
                 </div>
                 
                 <div style="margin-bottom:20px;">
@@ -1230,13 +1230,13 @@
             
             // Update title based on room ID
             if (roomId) {
-                document.title = "Room Chat - AI Chat";
+                document.title = "Room Chat - Global Chat";
                 // Try to get room name from Firestore
                 firebase.firestore().collection('rooms').doc(roomId).get()
                     .then(doc => {
                         if (doc.exists) {
                             const roomData = doc.data();
-                            document.title = `${roomData.name} - AI Chat`;
+                            document.title = `${roomData.name} - Global Chat`;
                             // Update room info in header if that element exists
                             const chatName = document.querySelector('.chat-name');
                             if (chatName) {
@@ -2333,7 +2333,7 @@
             db.ref(`typing/${currentUser?.uid}`).onDisconnect().remove();
         });
 
-        // About AI Chat Modal functionality
+        // About Global Chat Modal functionality
         const aboutAIChatModal = document.getElementById('aboutAIChatModal');
         const closeAboutBtn = document.getElementById('closeAboutBtn');
 
