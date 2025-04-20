@@ -1186,6 +1186,15 @@
         const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
         const profilePicInput = document.getElementById('profilePicInput');
         
+        // Function to close the profile modal with animation
+        function closeProfileModal() {
+            profileSettingsModal.style.opacity = '0';
+            setTimeout(() => {
+                profileSettingsModal.style.display = 'none';
+                profileSettingsModal.style.pointerEvents = 'none';
+            }, 300);
+        }
+        
         document.addEventListener('DOMContentLoaded', () => {
             // Get DOM elements
             const messageInput = document.getElementById('message-input');
@@ -1217,7 +1226,7 @@
             const roomId = urlParams.get('room');
             
             // Set the appropriate message path based on room ID
-            const messagesPath = roomId ? `room_messages/${roomId}` : 'messages';
+            const messagesPath = roomId ? `room_messages/${roomId}` : 'global_messages';
             
             // Update title based on room ID
             if (roomId) {
@@ -1377,36 +1386,68 @@
                         
                         // Scroll to bottom
                         scrollToBottom();
+                        console.log("Message sent successfully to", messagesPath);
                     })
                     .catch(error => {
-                        console.error("Error sending message: ", error);
-                        alert("Failed to send message. Please try again.");
+                        console.error("Error sending message:", error);
+                        showNotification("Failed to send message. Please try again.", "error");
                     });
             }
             
             // Load messages
             function loadMessages() {
+                console.log(`Connecting to Firebase path: ${messagesPath}`);
+                
                 // Get last 50 messages
                 db.ref(messagesPath).orderByChild('timestamp').limitToLast(50).on('value', snapshot => {
                     // Clear messages container
                     messagesContainer.innerHTML = '<div class="system-message"><span>Today</span></div>';
                     
-                    // Add each message
-                    snapshot.forEach(childSnapshot => {
-                        const message = childSnapshot.val();
-                        displayMessage(message, childSnapshot.key);
-                    });
+                    try {
+                        // Add each message
+                        if (snapshot.exists()) {
+                            snapshot.forEach(childSnapshot => {
+                                const message = childSnapshot.val();
+                                displayMessage(message, childSnapshot.key);
+                            });
+                            console.log(`Loaded ${snapshot.numChildren()} messages from ${messagesPath}`);
+                        } else {
+                            console.log(`No messages found in ${messagesPath}`);
+                            // Add a system message indicating no messages
+                            const noMessagesEl = document.createElement('div');
+                            noMessagesEl.className = 'system-message';
+                            noMessagesEl.innerHTML = '<span>No messages yet. Be the first to say hello!</span>';
+                            messagesContainer.appendChild(noMessagesEl);
+                        }
+                    } catch (error) {
+                        console.error("Error processing messages:", error);
+                        // Show error to user
+                        const errorEl = document.createElement('div');
+                        errorEl.className = 'system-message';
+                        errorEl.innerHTML = '<span>Error loading messages. Please try refreshing.</span>';
+                        messagesContainer.appendChild(errorEl);
+                    }
                     
                     // Scroll to bottom
                     scrollToBottom();
+                }, error => {
+                    console.error("Error loading messages:", error);
+                    // Show connection error to user
+                    messagesContainer.innerHTML = '<div class="system-message"><span>Error connecting to chat. Please check your connection.</span></div>';
                 });
                 
-                // Listen for new messages
+                // Listen for new messages and handle errors
                 db.ref(messagesPath).orderByChild('timestamp').limitToLast(1).on('child_added', snapshot => {
-                    // Scroll to bottom when new message comes in only if near bottom
-                    if (isNearBottom()) {
-                        scrollToBottom();
+                    try {
+                        // Scroll to bottom when new message comes in only if near bottom
+                        if (isNearBottom()) {
+                            scrollToBottom();
+                        }
+                    } catch (error) {
+                        console.error("Error processing new message:", error);
                     }
+                }, error => {
+                    console.error("Error listening for new messages:", error);
                 });
             }
             
@@ -1593,11 +1634,11 @@
             // Check if user previously selected dark mode
             if (localStorage.getItem('darkMode') === 'enabled') {
                 document.body.classList.add('dark-mode');
-                themeToggle.checked = true;
+                document.getElementById('theme-toggle').checked = true;
             }
             
             // Dark mode toggle
-            themeToggle.addEventListener('change', function() {
+            document.getElementById('theme-toggle').addEventListener('change', function() {
                 if (this.checked) {
                     document.body.classList.add('dark-mode');
                     localStorage.setItem('darkMode', 'enabled');
@@ -2154,15 +2195,6 @@
                         closeProfileModal();
                     }
                 });
-            }
-            
-            // Function to close the profile modal with animation
-            function closeProfileModal() {
-                profileSettingsModal.style.opacity = '0';
-                setTimeout(() => {
-                    profileSettingsModal.style.display = 'none';
-                    profileSettingsModal.style.pointerEvents = 'none';
-                }, 300);
             }
             
             // Edit username when clicking the edit button
