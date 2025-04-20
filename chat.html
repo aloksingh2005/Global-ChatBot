@@ -1208,6 +1208,9 @@
             const messagesContainer = document.getElementById('messages-container');
             const colorOptions = document.querySelectorAll('.color-option');
             const fontOptions = document.querySelectorAll('.font-option');
+            const onlineUsersCount = document.getElementById('online-users-display');
+            const profilePic = document.getElementById('profile-pic');
+            let typingTimeout;
             
             // Get room ID from URL parameter
             const urlParams = new URLSearchParams(window.location.search);
@@ -1299,6 +1302,7 @@
                     usernameEl.textContent = user.displayName || 'User';
                 }
                 
+                const userEmailEl = document.getElementById('user-email');
                 if (userEmailEl) {
                     userEmailEl.textContent = user.email || '';
                 }
@@ -1578,7 +1582,7 @@
             }
             
             // Logout handler
-            logoutBtn.addEventListener('click', () => {
+            document.getElementById('logout-btn').addEventListener('click', () => {
                 auth.signOut().then(() => {
                     window.location.href = 'login.html';
                 }).catch(error => {
@@ -2235,7 +2239,6 @@
             // Typing indicator variables
             const typingIndicator = document.getElementById('typing-indicator');
             const typingUsername = document.getElementById('typing-username');
-            let typingTimeout;
             
             // Add event listener for typing
             messageInput.addEventListener('input', () => {
