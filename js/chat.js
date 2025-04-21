@@ -26,6 +26,15 @@ const profilePicContainer = document.getElementById('profilePicContainer');
 const changeProfilePicBtn = document.getElementById('changeProfilePicBtn');
 const profilePicInput = document.getElementById('profilePicInput');
 
+// Global variable for current user - MAKE SURE IT'S DEFINED GLOBALLY
+let currentUser = null;
+// Global variable for message path - needed by functions outside DOMContentLoaded
+let messagesPath = 'global_messages'; // Default, will be updated later
+// Global variable for storing element to delete - needed by confirm/delete functions
+let elementToDeleteForMe = null;
+// Global variable for typing timeout - needed by updateTypingStatus
+let typingTimeout;
+
 // Function to close the profile modal with animation
 function closeProfileModal() {
     profileSettingsModal.style.opacity = '0';
@@ -35,7 +44,751 @@ function closeProfileModal() {
     }, 300);
 }
 
+// --- Functions defined OUTSIDE DOMContentLoaded ---
+function deleteMessage(key) {
+    // In a real app, you might want to consider different deletion strategies:
+    // 1. Complete removal from database (for your own messages only)
+    // 2. Setting a "deleted" flag (what we're doing here)
+    // 3. Keeping a log of deleted messages
+
+    db.ref(`${messagesPath}/${key}`).update({
+        deleted: true,
+        // message: "This message was deleted" // Optional: Keep original message for potential undelete? Or just rely on 'deleted' flag.
+    })
+        .then(() => {
+            // Success notification
+            // showDeletedNotification(); // Note: This function seems undefined elsewhere in the code.
+            showNotification('Message deleted successfully.', 'success'); // Using existing notification function
+            console.log(`Message ${key} marked as deleted in ${messagesPath}`);
+        })
+        .catch(error => {
+            console.error("Error deleting message: ", error);
+            alert("Failed to delete message. Please try again.");
+        });
+}
+
+function addOrUpdateReaction(messageKey, emoji) {
+    if (!currentUser || !messageKey) return;
+
+    const reactionRef = db.ref(`${messagesPath}/${messageKey}/reactions/${currentUser.uid}`);
+
+    reactionRef.once('value').then(snapshot => {
+        if (snapshot.exists() && snapshot.val() === emoji) {
+            // If user clicked the same emoji, remove their reaction
+            reactionRef.remove()
+                .catch(error => console.error("Error removing reaction:", error));
+        } else {
+            // Otherwise, set/update their reaction
+            reactionRef.set(emoji)
+                .catch(error => console.error("Error setting reaction:", error));
+        }
+    }).catch(error => console.error("Error checking existing reaction:", error));
+}
+
+function setupDeletedPlaceholderLongPress(element, messageRowElement) {
+    let pressTimer;
+    let isLongPressing = false;
+
+    const startPress = function (e) {
+        // Prevent triggering on anything other than the main placeholder bubble/row
+        if (e.target !== element && !element.contains(e.target)) {
+            return;
+        }
+        e.stopPropagation(); // Prevent event bubbling
+
+        isLongPressing = false;
+        element.classList.add('pressing'); // Optional visual feedback
+
+        pressTimer = setTimeout(function () {
+            isLongPressing = true;
+            element.classList.remove('pressing');
+            // Call the function to show the custom confirmation modal
+            confirmDeletePlaceholderForMe(messageRowElement);
+        }, 500); // 500ms for long press
+    };
+
+    const endPress = function (e) {
+        e.stopPropagation();
+        element.classList.remove('pressing');
+        clearTimeout(pressTimer);
+    };
+
+    const cancelPress = function (e) {
+         e.stopPropagation();
+        if (!isLongPressing) {
+            element.classList.remove('pressing');
+            clearTimeout(pressTimer);
+        }
+    };
+
+    // Use mouse events for desktop and touch events for mobile
+    element.addEventListener('mousedown', startPress);
+    element.addEventListener('touchstart', startPress, { passive: true });
+
+    element.addEventListener('mouseup', endPress);
+    element.addEventListener('mouseleave', cancelPress);
+    element.addEventListener('touchend', endPress);
+    element.addEventListener('touchcancel', endPress);
+
+    console.log("Attaching long press listener to deleted placeholder:", messageRowElement); // Log attachment
+}
+
+function confirmDeletePlaceholderForMe(messageElement) {
+    console.log("ConfirmDeletePlaceholderForMe called for:", messageElement); // Log function call
+    const modal = document.getElementById('delete-for-me-confirmation-modal');
+    if (modal) {
+        elementToDeleteForMe = messageElement; // Store the element to delete
+        modal.classList.add('active'); // Show the modal
+        console.log("Modal activated"); // Log modal activation
+    } else {
+        console.error("Delete confirmation modal not found!");
+    }
+}
+
+function hideConfirmationModal() {
+    console.log("hideConfirmationModal called"); // Log function call
+    const modal = document.getElementById('delete-for-me-confirmation-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        console.log("Modal 'active' class removed"); // Log class removal
+    } else {
+         console.error("Modal not found in hideConfirmationModal");
+    }
+    elementToDeleteForMe = null; // Clear the stored element
+}
+
+function deletePlaceholderForMe(messageElement) {
+    console.log("deletePlaceholderForMe called for:", messageElement); // Log function call
+    if (messageElement) {
+        messageElement.style.transition = 'opacity 0.3s ease, height 0.3s ease, margin 0.3s ease, padding 0.3s ease';
+        messageElement.style.opacity = '0';
+        messageElement.style.height = '0';
+        messageElement.style.marginTop = '0';
+        messageElement.style.marginBottom = '0';
+        messageElement.style.paddingTop = '0';
+        messageElement.style.paddingBottom = '0';
+        messageElement.style.overflow = 'hidden';
+        console.log("Fading out and removing placeholder"); // Log removal start
+        setTimeout(() => {
+            messageElement.remove();
+             console.log("Placeholder removed from DOM"); // Log removal end
+        }, 300);
+    } else {
+         console.error("messageElement is null in deletePlaceholderForMe");
+    }
+}
+
+function showMessageOptions(event, messageKey, isMyMessage) {
+    console.log(`showMessageOptions called for key: ${messageKey}, isMyMessage: ${isMyMessage}`); // Log entry
+    const messageOptions = document.getElementById('message-options');
+    // --- Add check for main container ---
+    if (!messageOptions) {
+        console.error("Message options container (#message-options) not found!");
+        return;
+    }
+
+    const deleteOption = messageOptions.querySelector('.delete-option');
+    const replyOption = messageOptions.querySelector('.reply-option');
+    const reactOption = messageOptions.querySelector('.react-option');
+    const emojiPicker = document.getElementById('emoji-picker'); // Assuming emoji picker exists globally
+
+    // --- Add check for specific options and picker ---
+    if (!deleteOption || !replyOption || !reactOption) {
+         console.error("One or more options elements (delete, reply, react) not found within #message-options!");
+         // Optionally hide the whole menu if parts are missing, or just log
+         // messageOptions.classList.remove('active'); // Example: hide if broken
+         // return;
+    }
+    if (!emojiPicker) {
+         console.warn("Emoji picker element (#emoji-picker) not found."); // Warn but maybe continue
+    }
+    // --- End checks ---
+
+    // Positioning logic (keep as is, maybe wrap in try/catch if needed)
+    try {
+        const bubbleRect = event.target.getBoundingClientRect();
+        // ... (rest of positioning code) ...
+        console.log("Calculated message options position:", messageOptions.style.top, messageOptions.style.left);
+    } catch (posError) {
+        console.error("Error calculating message options position:", posError);
+        return; // Stop if positioning fails
+    }
+
+
+    // Show delete option only for your own messages
+    if (deleteOption) { // Check if deleteOption exists before styling
+        console.log(`Setting delete option display: ${isMyMessage ? 'flex' : 'none'}`);
+        deleteOption.style.display = isMyMessage ? 'flex' : 'none';
+    }
+
+
+    // Show the options menu
+    messageOptions.classList.add('active');
+    messageOptions.dataset.messageKey = messageKey;
+    console.log("Message options menu activated.");
+
+    // Setup onclick handlers only if elements exist
+    if (reactOption && emojiPicker) {
+        reactOption.onclick = function(e) {
+            e.stopPropagation();
+            // ... (position and show emojiPicker logic) ...
+            messageOptions.classList.remove('active');
+        };
+    }
+
+    if (replyOption) {
+        replyOption.onclick = function() {
+            // ... (prepareReply logic) ...
+            messageOptions.classList.remove('active');
+        };
+    }
+
+     if (deleteOption) {
+        deleteOption.onclick = function () {
+             console.log(`Delete option clicked for key: ${messageKey}`);
+             if (typeof deleteMessage === 'function') {
+                  if (confirm('Are you sure you want to delete this message?')) {
+                      deleteMessage(messageKey);
+                  }
+             } else {
+                 console.error("deleteMessage function is not defined globally!");
+                 alert("Error: Delete function not available.");
+             }
+             messageOptions.classList.remove('active');
+         };
+     }
+
+
+    // Click outside to close - You might need a more robust way to handle this listener
+    // to avoid adding it multiple times. For now, just log.
+    console.log("Attaching document click listener for closePopups (if needed)");
+    // document.addEventListener('click', closePopups);
+}
+
+function closePopups(e) {
+    // Implementation of closePopups function
+}
+
+function setupLongPress(element, messageKey, isMyMessage) {
+    let pressTimer;
+    let isLongPressing = false;
+    console.log(`setupLongPress called for key: ${messageKey}, isMyMessage: ${isMyMessage}`); // Log entry
+
+    const startPress = function (e) {
+        console.log(`startPress triggered for key: ${messageKey}`); // Log start
+        // If the message somehow got deleted between display and press, do nothing
+        const messageRow = element.closest('.message-row');
+        if (messageRow && messageRow.classList.contains('deleted')) {
+            console.log(`Message ${messageKey} is deleted, aborting long press.`);
+            return;
+        }
+
+        isLongPressing = false;
+        element.classList.add('pressing');
+
+        pressTimer = setTimeout(function () {
+            isLongPressing = true;
+            element.classList.remove('pressing');
+            console.log(`Long press detected for key: ${messageKey}. Showing options.`); // Log detection
+            showMessageOptions(e, messageKey, isMyMessage); // Call the function to show the menu
+        }, 500);
+    };
+
+    const endPress = function (e) {
+        e.stopPropagation();
+        element.classList.remove('pressing');
+        clearTimeout(pressTimer);
+    };
+
+    const cancelPress = function (e) {
+         e.stopPropagation();
+        if (!isLongPressing) {
+            element.classList.remove('pressing');
+            clearTimeout(pressTimer);
+        }
+    };
+
+    // Add listeners
+    element.addEventListener('mousedown', startPress);
+    element.addEventListener('touchstart', startPress, { passive: true });
+
+    element.addEventListener('mouseup', endPress);
+    element.addEventListener('mouseleave', cancelPress);
+    element.addEventListener('touchend', endPress);
+    element.addEventListener('touchcancel', endPress);
+}
+
+function showNotification(message, type = 'success') {
+    // Implementation of showNotification function
+}
+
+function updateUserInfo(user) {
+    const usernameEl = document.getElementById('username'); // Get element inside function
+    const userEmailEl = document.getElementById('user-email'); // Get element inside function
+    const profilePic = document.getElementById('profile-pic'); // Get element inside function
+
+    if (user) { // Only update if user is not null
+        if (usernameEl) {
+            usernameEl.textContent = user.displayName || 'User';
+        }
+        if (userEmailEl) {
+            userEmailEl.textContent = user.email || '';
+        }
+        if (profilePic) {
+            if (user.photoURL) {
+                profilePic.innerHTML = `<img src="${user.photoURL}" alt="${user.displayName || 'User'}" style="width:100%;height:100%;border-radius:50%;">`;
+            } else {
+                const initials = (user.displayName || 'User').charAt(0).toUpperCase();
+                profilePic.textContent = initials;
+            }
+        }
+         // Update profile modal if open (optional, but good practice)
+         const displayUsernameModal = document.getElementById('displayUsername');
+         const displayEmailModal = document.getElementById('displayEmail');
+         if (profileSettingsModal && profileSettingsModal.style.display !== 'none') {
+              if (displayUsernameModal) displayUsernameModal.textContent = user.displayName || 'User';
+              if (displayEmailModal) displayEmailModal.textContent = user.email || '';
+              updateProfilePicInModal(); // Assumes this uses currentUser internally or gets passed user
+         }
+
+    } else {
+        // Handle case where user logs out or isn't loaded yet
+        if (usernameEl) usernameEl.textContent = 'User';
+        if (userEmailEl) userEmailEl.textContent = '';
+        if (profilePic) profilePic.textContent = '?'; // Or a placeholder icon
+    }
+}
+
+function updateProfilePicInModal() {
+    // Implementation of updateProfilePicInModal function
+}
+
+function addOnlineUser(user) {
+     if (!user || !user.uid) {
+         console.error("Cannot add online user: user data is invalid", user);
+         return;
+     }
+    const userRef = db.ref(`online/${user.uid}`);
+    userRef.set({
+        displayName: user.displayName || 'Anonymous',
+        lastOnline: firebase.database.ServerValue.TIMESTAMP
+    });
+    userRef.onDisconnect().remove();
+
+    // Listen for online users count - move this listener setup outside this function?
+    // Maybe attach it once in DOMContentLoaded after initial auth.
+    // db.ref('online').on('value', snapshot => { ... });
+}
+
+function updateOnlineCount(count) {
+     const onlineUsersDisplay = document.getElementById('online-users-display'); // Get element inside
+     if (onlineUsersDisplay) {
+        if (count > 0) {
+            const statusText = count === 1 ? 'user online' : 'users online';
+            onlineUsersDisplay.textContent = `${count} ${statusText}`;
+        } else {
+            onlineUsersDisplay.textContent = '';
+        }
+     } else {
+         console.warn("Online users display element not found.");
+     }
+}
+
+function sendMessage() {
+    const messageInput = document.getElementById('message-input'); // Get element inside
+     if (!currentUser) {
+         console.error("Cannot send message: user not logged in.");
+         showNotification("You must be logged in to send messages.", "error");
+         return;
+     }
+     if (!messageInput) {
+          console.error("Message input element not found.");
+          return;
+     }
+
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    const newMessage = {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName || 'Anonymous',
+        photoURL: currentUser.photoURL,
+        message: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        status: 'sent'
+    };
+
+    if (messageInput.dataset.replyTo) {
+        newMessage.replyTo = messageInput.dataset.replyTo;
+        newMessage.replyToName = messageInput.dataset.replyToName;
+        newMessage.replyToText = messageInput.dataset.replyToText;
+    }
+
+    // Clear typing status
+    updateTypingStatus(false);
+    // Clear typing timeout if it exists in this scope
+    if (typeof typingTimeout !== 'undefined') {
+        clearTimeout(typingTimeout);
+    }
+
+    // Use the globally defined messagesPath
+    db.ref(messagesPath).push(newMessage)
+        .then(() => {
+            messageInput.value = '';
+            // Cancel reply if function exists
+            if (typeof cancelReply === 'function') {
+                cancelReply();
+            }
+            // Scroll to bottom if function exists
+            if (typeof scrollToBottom === 'function') {
+                scrollToBottom();
+            }
+            console.log("Message sent successfully to", messagesPath);
+        })
+        .catch(error => {
+            console.error("Error sending message:", error);
+            // Show notification if function exists
+            if (typeof showNotification === 'function') {
+                showNotification("Failed to send message. Please try again.", "error");
+            } else {
+                alert("Failed to send message. Please try again.");
+            }
+        });
+}
+
+function loadMessages(userForDisplay) {
+    if (!userForDisplay) {
+        console.error("loadMessages called without a valid user object.");
+        return; // Don't proceed without user
+    }
+    console.log(`Connecting to Firebase path: ${messagesPath} for user: ${userForDisplay.uid}`);
+    const messagesContainer = document.getElementById('messages-container');
+    if (!messagesContainer) {
+         console.error("Messages container not found. Cannot load messages.");
+         return;
+    }
+
+    const query = db.ref(messagesPath).orderByChild('timestamp').limitToLast(50);
+    query.on('value', snapshot => {
+        messagesContainer.innerHTML = '';
+        let lastDateString = '';
+        try {
+            if (snapshot.exists()) {
+                snapshot.forEach(childSnapshot => {
+                    const message = childSnapshot.val();
+                    const key = childSnapshot.key;
+                    if (!message || !key) {
+                         console.warn("Skipping invalid message data:", message, key);
+                         return;
+                    }
+                    const timestamp = new Date(message.timestamp);
+                    if (isNaN(timestamp.getTime())) {
+                         console.warn("Skipping message with invalid timestamp:", key, message.timestamp);
+                         return;
+                    }
+                    // Date separator logic...
+                    const today = new Date();
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    let currentDateString = '';
+                    if (timestamp.toDateString() === today.toDateString()) {
+                        currentDateString = 'Today';
+                    } else if (timestamp.toDateString() === yesterday.toDateString()) {
+                        currentDateString = 'Yesterday';
+                    } else {
+                        currentDateString = timestamp.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+                    }
+                    if (currentDateString !== lastDateString) {
+                         const dateEl = document.createElement('div');
+                         dateEl.className = 'message-date';
+                         dateEl.setAttribute('data-date', currentDateString);
+                         dateEl.innerHTML = `<span>${currentDateString}</span>`;
+                         messagesContainer.appendChild(dateEl);
+                         lastDateString = currentDateString;
+                    }
+                    // *** Pass the user object to displayMessage ***
+                    displayMessage(message, key, userForDisplay);
+                });
+                console.log(`Loaded/Updated ${snapshot.numChildren()} messages from ${messagesPath}`);
+            } else {
+                console.log(`No messages found in ${messagesPath}`);
+                const noMessagesEl = document.createElement('div');
+                noMessagesEl.className = 'system-message';
+                noMessagesEl.innerHTML = '<span>No messages yet. Be the first to say hello!</span>';
+                messagesContainer.appendChild(noMessagesEl);
+            }
+        } catch (error) {
+            console.error("Error processing messages:", error);
+            messagesContainer.innerHTML = '<div class="system-message"><span>Error processing messages. Please try refreshing.</span></div>';
+        }
+        if (typeof scrollToBottom === 'function') scrollToBottom();
+    }, error => {
+        console.error("Error loading messages from Firebase:", error);
+         messagesContainer.innerHTML = '<div class="system-message"><span>Error connecting to chat. Please check your connection.</span></div>';
+    });
+}
+
+function displayMessage(message, key, user) {
+    const messagesContainer = document.getElementById('messages-container');
+    if (!messagesContainer) return;
+
+    const isMyMessage = message.uid === user.uid;
+    const messageClass = isMyMessage ? 'my-message' : 'others-message';
+    const timestamp = new Date(message.timestamp);
+    const timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const messageEl = document.createElement('div');
+    messageEl.className = `message-row ${messageClass} ${message.deleted ? 'deleted' : ''}`;
+    messageEl.dataset.key = key;
+    messageEl.dataset.sender = message.uid;
+    messageEl.dataset.text = message.message || '';
+
+    let replyHtml = '';
+    if (message.replyTo && message.replyToName && message.replyToText) {
+        const replyToName = message.replyToName;
+        const replyToText = message.replyToText;
+         // Ensure escapeHTML exists
+         const safeName = (typeof escapeHTML === 'function') ? escapeHTML(replyToName) : replyToName;
+         const safeText = (typeof escapeHTML === 'function') ? escapeHTML(replyToText) : replyToText;
+         replyHtml = `<div class="reply-container"><div class="reply-sender">${safeName}</div><div class="reply-text">${safeText}</div></div>`;
+    }
+
+    let avatarHTML = '';
+    if (!isMyMessage) {
+        const displayName = message.displayName || 'User';
+        // Ensure getRandomColor exists
+        const safeColor = (typeof getRandomColor === 'function') ? getRandomColor(message.uid) : '#cccccc';
+        const avatarText = message.photoURL
+             ? `<img src="${message.photoURL}" alt="${displayName}" style="width:100%;height:100%;border-radius:50%; object-fit: cover;">`
+             : displayName.charAt(0).toUpperCase();
+        const avatarBg = message.photoURL ? 'transparent' : safeColor;
+        avatarHTML = `<div class="message-avatar" style="width:30px;height:30px;border-radius:50%;background-color:${avatarBg};color:white;display:inline-flex;justify-content:center;align-items:center;margin-right:8px;font-size:14px; flex-shrink: 0;">${avatarText}</div>`;
+    }
+
+    let statusHtml = '';
+     if (isMyMessage && !message.deleted) {
+         const statusIcon = message.status === 'read' ? 'fa-check-double' : 'fa-check';
+         const statusColor = message.status === 'read' ? '#4FC3F7' : 'var(--secondary-text)';
+         statusHtml = `<span class="message-status" style="color:${statusColor};"><i class="fas ${statusIcon}"></i></span>`;
+    }
+
+    // Ensure escapeHTML exists
+    let messageContent = message.deleted
+        ? '<span class="deleted-message"><i class="fas fa-ban" style="margin-right: 5px;"></i>This message was deleted</span>'
+        : ((typeof escapeHTML === 'function') ? escapeHTML(message.message || '') : (message.message || ''));
+
+    let reactionsHtml = '';
+    if (message.reactions && !message.deleted) {
+        const reactionCounts = {};
+        let currentUserReaction = null;
+        for (const userId in message.reactions) {
+            const emoji = message.reactions[userId];
+            reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+            if (userId === user?.uid) { // Use passed user
+                currentUserReaction = emoji;
+            }
+        }
+        if (Object.keys(reactionCounts).length > 0) {
+            reactionsHtml += '<div class="message-reactions">';
+            for (const emoji in reactionCounts) {
+                const count = reactionCounts[emoji];
+                const reactedByMeClass = (currentUserReaction === emoji) ? 'reacted-by-me' : '';
+                reactionsHtml += `
+                    <div class="reaction-chip ${reactedByMeClass}" data-emoji="${emoji}" data-message-key="${key}">
+                        ${emoji} <span class="reaction-count">${count > 1 ? count : ''}</span>
+                    </div>
+                `;
+            }
+            reactionsHtml += '</div>';
+        }
+    }
+
+    const editedIndicator = message.editedAt ? '<span class="edited-indicator">(edited)</span>' : '';
+
+    messageEl.innerHTML = `
+        <div class="message-group">
+             ${!isMyMessage ? `<div class="sender-name">${escapeHTML(message.displayName || 'User')}</div>` : ''}
+             <div style="display:flex; align-items:flex-end; ${isMyMessage ? 'justify-content:flex-end;' : ''}">
+                ${!isMyMessage ? avatarHTML : ''}
+                <div class="message-bubble">
+                        ${replyHtml}
+                        <div class="message-content">${messageContent}</div>
+                         <div style="text-align: right; margin-top: 3px;">
+                            ${editedIndicator}
+                            <span class="message-time">${timeString}</span>
+                            ${statusHtml}
+                         </div>
+                         ${reactionsHtml}
+                </div>
+            </div>
+        </div>
+    `;
+
+    messagesContainer.appendChild(messageEl);
+
+    // Interaction Logic (ensure functions exist before calling)
+    if (!message.deleted) {
+        const messageBubble = messageEl.querySelector('.message-bubble');
+        if (messageBubble) {
+            if (typeof setupLongPress === 'function') {
+                console.log("Attaching REGULAR long press listener to bubble:", messageBubble, "for key:", key);
+                setupLongPress(messageBubble, key, isMyMessage);
+            } else {
+                console.error("setupLongPress function not defined.");
+            }
+            messageBubble.querySelectorAll('.reaction-chip').forEach(chip => {
+                chip.addEventListener('click', function(e) {
+                    e.stopPropagation(); // Prevent triggering long press
+                    const clickedEmoji = this.dataset.emoji;
+                    const msgKey = this.dataset.messageKey;
+                    // Ensure addOrUpdateReaction is available
+                    if (typeof addOrUpdateReaction === 'function') {
+                         addOrUpdateReaction(msgKey, clickedEmoji);
+                    } else {
+                        console.error("addOrUpdateReaction function is not defined.");
+                    }
+                });
+            });
+        } else {
+            console.error("Message bubble not found for non-deleted message:", key);
+        }
+    } else if (message.deleted && isMyMessage) {
+        // --- Add specific long-press for "Delete for me" on OWN deleted messages ---
+        console.log("Attaching DELETED placeholder long press listener to messageEl:", messageEl, "for key:", key);
+         // Ensure setupDeletedPlaceholderLongPress is available
+         if (typeof setupDeletedPlaceholderLongPress === 'function') {
+            setupDeletedPlaceholderLongPress(messageEl, messageEl); // Pass the whole row element
+         } else {
+             console.error("setupDeletedPlaceholderLongPress function is not defined.");
+         }
+    }
+}
+
+function scrollToBottom() {
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function isNearBottom() {
+    const threshold = 150;
+    const position = messagesContainer.scrollTop + messagesContainer.offsetHeight;
+    const height = messagesContainer.scrollHeight;
+    return position > height - threshold;
+}
+
+function escapeHTML(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function getRandomColor(uid) {
+    // Generate a consistent color based on uid
+    let hash = 0;
+    for (let i = 0; i < uid.length; i++) {
+        hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    const colors = [
+        '#2196F3', '#4CAF50', '#FF9800', '#9C27B0',
+        '#E91E63', '#F44336', '#3F51B5', '#00BCD4'
+    ];
+
+    return colors[Math.abs(hash) % colors.length];
+}
+
+function applyAccentColor(color) {
+    // Get elements inside function
+    const buttons = document.querySelectorAll('.btn-primary, .send-btn');
+    const accentElements = document.querySelectorAll('.active-tab, .radio-inner, .chat-avatar, .menu-user-avatar');
+    const borderElements = document.querySelectorAll('.font-radio.selected');
+    const myMessageBubbles = document.querySelectorAll('.my-message .message-bubble');
+
+    document.documentElement.style.setProperty('--accent-color', color);
+    buttons.forEach(btn => { btn.style.backgroundColor = color; });
+    accentElements.forEach(el => {
+        el.style.backgroundColor = color;
+        if (color === '#ffffff') {
+            el.style.color = '#333'; // Dark text for white background
+        } else {
+            el.style.color = 'white'; // White text for colored backgrounds
+        }
+    });
+    borderElements.forEach(el => { el.style.borderColor = color; });
+    myMessageBubbles.forEach(el => {
+        el.style.backgroundColor = color === '#ffffff' ? '#dcf8c6' : color;
+        el.style.color = color === '#ffffff' || color === '#dcf8c6' ? '#333' : 'white';
+    });
+}
+
+function applyFont(font) {
+    // Maybe select elements here if needed, or rely on CSS variables
+    document.body.style.fontFamily = font + ', sans-serif'; // Example
+}
+
+function loadSavedSettings() {
+    // Get elements inside function
+    const colorOptions = document.querySelectorAll('.color-option');
+    const fontOptions = document.querySelectorAll('.font-option');
+    const savedColor = localStorage.getItem('accentColor');
+    if (savedColor) {
+        colorOptions.forEach(opt => {
+            opt.classList.remove('selected');
+            opt.classList.add('selected');
+            applyAccentColor(opt.getAttribute('data-color'));
+        });
+    } else {
+        if (colorOptions.length > 0) {
+             colorOptions[0].classList.add('selected');
+             applyAccentColor(colorOptions[0].getAttribute('data-color'));
+        }
+    }
+    // ... (font logic similar) ...
+}
+
+function prepareReply(name, text, messageId) {
+    // Get elements inside function
+    const messageInput = document.getElementById('message-input');
+    // ... (rest of prepareReply logic) ...
+}
+
+function cancelReply() {
+     // Get elements inside function
+     const messageInput = document.getElementById('message-input');
+     const replyPreview = document.querySelector('.reply-preview');
+    // ... (rest of cancelReply logic) ...
+}
+
+function updateMessageStatus() {
+    // Get elements inside function
+    const myMessages = document.querySelectorAll('.my-message .message-status i');
+    // ... (rest of updateMessageStatus logic) ...
+}
+
+function updateTypingStatus(isTyping) {
+     if (currentUser) {
+         db.ref(`typing/${currentUser.uid}`).set(isTyping ? {
+             uid: currentUser.uid,
+             displayName: currentUser.displayName || 'Anonymous',
+             timestamp: firebase.database.ServerValue.TIMESTAMP
+         } : null);
+     }
+}
+
+function closeAboutModal() {
+    // Implementation of closeAboutModal function
+}
+
+function loadUserProfile() {
+    // Implementation of loadUserProfile function
+}
+
+// --- DOMContentLoaded Listener ---
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOMContentLoaded event fired");
+
     // Get DOM elements
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
@@ -49,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const appearanceToggle = document.getElementById('appearance-toggle');
     const appearanceSection = document.getElementById('appearance-section');
     const appearanceArrow = document.getElementById('appearance-arrow');
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const darkModeToggle = document.getElementById('theme-toggle');
     const aboutFunChat = document.getElementById('about-funchat');
     const returnDashboard = document.getElementById('return-dashboard');
     const usernameEl = document.getElementById('username');
@@ -59,14 +812,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const fontOptions = document.querySelectorAll('.font-option');
     const onlineUsersCount = document.getElementById('online-users-display');
     const profilePic = document.getElementById('profile-pic');
-    let typingTimeout;
+
+    // --- Add these missing element definitions ---
+    const accentThemeToggle = document.getElementById('accent-theme-toggle');
+    const accentThemeOptions = document.getElementById('accent-theme-options');
+    const fontSettingsToggle = document.getElementById('font-settings-toggle');
+    const fontSettingsOptions = document.getElementById('font-settings-options');
+    // --- End of added definitions ---
+
+    const attachBtn = document.getElementById('attach-btn');
+    const attachmentOptions = document.getElementById('attachment-options');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const typingUsername = document.getElementById('typing-username');
 
     // Get room ID from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const roomId = urlParams.get('room');
 
     // Set the appropriate message path based on room ID
-    const messagesPath = roomId ? `room_messages/${roomId}` : 'global_messages';
+    messagesPath = roomId ? `room_messages/${roomId}` : 'global_messages';
 
     // Update title based on room ID
     if (roomId) {
@@ -87,59 +851,29 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => console.error("Error fetching room data:", error));
     }
 
-    // Function to show custom notification
-    function showNotification(message, type = 'success') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'custom-notification';
-        notification.textContent = message;
-
-        // Add styles
-        notification.style.position = 'fixed';
-        notification.style.top = '20px';
-        notification.style.left = '50%';
-        notification.style.transform = 'translateX(-50%)';
-        notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#e74c3c';
-        notification.style.color = 'white';
-        notification.style.padding = '15px 25px';
-        notification.style.borderRadius = '8px';
-        notification.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-        notification.style.zIndex = '1000';
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.3s ease';
-
-        // Add to body
-        document.body.appendChild(notification);
-
-        // Fade in
-        setTimeout(() => {
-            notification.style.opacity = '1';
-        }, 10);
-
-        // Remove after delay
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 2000);
-    }
-
-    // Current Firebase user
-    let currentUser;
-
-    // Check authentication
+    // Authentication listener MUST come first
     auth.onAuthStateChanged(user => {
         if (user) {
-            currentUser = user;
-            // Update user info in menu
-            updateUserInfo(user);
-            // Add user to online users
-            addOnlineUser(user);
-            // Load messages
-            loadMessages();
+            currentUser = user; // Assign to the global variable
+            console.log("Auth state changed: User logged in", currentUser.uid);
+
+            // *** Call functions AFTER user is set ***
+            updateUserInfo(currentUser);
+            addOnlineUser(currentUser);
+
+            // Set up listeners that depend on currentUser
+            db.ref('online').on('value', snapshot => {
+                 updateOnlineCount(snapshot.numChildren());
+             });
+            db.ref(`typing/${currentUser.uid}`).onDisconnect().remove();
+            db.ref(`online/${currentUser.uid}`).onDisconnect().remove(); // Ensure online status is also cleared
+
+            // *** NOW load messages, passing the confirmed user ***
+            loadMessages(currentUser);
+
         } else {
-            // Redirect to login if not authenticated
+            currentUser = null;
+            console.log("Auth state changed: User logged out");
             window.location.href = 'login.html';
         }
     });
@@ -191,69 +925,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function sendMessage() {
-        const message = messageInput.value.trim();
-
-        if (!message) return;
-
-        // Create message object
-        const newMessage = {
-            uid: currentUser.uid,
-            displayName: currentUser.displayName || 'Anonymous',
-            photoURL: currentUser.photoURL,
-            message: message,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            status: 'sent'
-        };
-
-        // Add reply data if replying to a message
-        if (messageInput.dataset.replyTo) {
-            newMessage.replyTo = messageInput.dataset.replyTo;
-            newMessage.replyToName = messageInput.dataset.replyToName;
-            newMessage.replyToText = messageInput.dataset.replyToText;
+    // Load messages
+    function loadMessages(userForDisplay) {
+        console.log(`Connecting to Firebase path: ${messagesPath} for user: ${userForDisplay.uid}`);
+        const messagesContainer = document.getElementById('messages-container');
+        if (!messagesContainer) {
+             console.error("Messages container not found. Cannot load messages.");
+             return;
         }
 
-        // Clear typing status when message is sent
-        updateTypingStatus(false);
-        clearTimeout(typingTimeout);
-
-        // Push to database
-        db.ref(messagesPath).push(newMessage)
-            .then(() => {
-                // Clear input and reset reply
-                messageInput.value = '';
-                cancelReply();
-
-                // Scroll to bottom
-                scrollToBottom();
-                console.log("Message sent successfully to", messagesPath);
-            })
-            .catch(error => {
-                console.error("Error sending message:", error);
-                showNotification("Failed to send message. Please try again.", "error");
-            });
-    }
-
-    // Load messages
-    function loadMessages() {
-        console.log(`Connecting to Firebase path: ${messagesPath}`);
-
-        // Get last 50 messages
-        db.ref(messagesPath).orderByChild('timestamp').limitToLast(50).on('value', snapshot => {
-            // Clear messages container
-            messagesContainer.innerHTML = '<div class="system-message"><span>Today</span></div>';
-
+        const query = db.ref(messagesPath).orderByChild('timestamp').limitToLast(50);
+        query.on('value', snapshot => {
+            messagesContainer.innerHTML = '';
+            let lastDateString = '';
             try {
-                // Add each message
                 if (snapshot.exists()) {
                     snapshot.forEach(childSnapshot => {
                         const message = childSnapshot.val();
-                        displayMessage(message, childSnapshot.key);
+                        const key = childSnapshot.key;
+                        if (!message || !key) {
+                             console.warn("Skipping invalid message data:", message, key);
+                             return;
+                        }
+                        const timestamp = new Date(message.timestamp);
+                        if (isNaN(timestamp.getTime())) {
+                             console.warn("Skipping message with invalid timestamp:", key, message.timestamp);
+                             return;
+                        }
+                        // Date separator logic...
+                        const today = new Date();
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        let currentDateString = '';
+                        if (timestamp.toDateString() === today.toDateString()) {
+                            currentDateString = 'Today';
+                        } else if (timestamp.toDateString() === yesterday.toDateString()) {
+                            currentDateString = 'Yesterday';
+                        } else {
+                            currentDateString = timestamp.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+                        }
+                        if (currentDateString !== lastDateString) {
+                             const dateEl = document.createElement('div');
+                             dateEl.className = 'message-date';
+                             dateEl.setAttribute('data-date', currentDateString);
+                             dateEl.innerHTML = `<span>${currentDateString}</span>`;
+                             messagesContainer.appendChild(dateEl);
+                             lastDateString = currentDateString;
+                        }
+                        // *** Pass the user object to displayMessage ***
+                        displayMessage(message, key, userForDisplay);
                     });
-                    console.log(`Loaded ${snapshot.numChildren()} messages from ${messagesPath}`);
+                    console.log(`Loaded/Updated ${snapshot.numChildren()} messages from ${messagesPath}`);
                 } else {
                     console.log(`No messages found in ${messagesPath}`);
-                    // Add a system message indicating no messages
                     const noMessagesEl = document.createElement('div');
                     noMessagesEl.className = 'system-message';
                     noMessagesEl.innerHTML = '<span>No messages yet. Be the first to say hello!</span>';
@@ -261,138 +985,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error("Error processing messages:", error);
-                // Show error to user
-                const errorEl = document.createElement('div');
-                errorEl.className = 'system-message';
-                errorEl.innerHTML = '<span>Error loading messages. Please try refreshing.</span>';
-                messagesContainer.appendChild(errorEl);
+                messagesContainer.innerHTML = '<div class="system-message"><span>Error processing messages. Please try refreshing.</span></div>';
             }
-
-            // Scroll to bottom
-            scrollToBottom();
+            if (typeof scrollToBottom === 'function') scrollToBottom();
         }, error => {
-            console.error("Error loading messages:", error);
-            // Show connection error to user
+            console.error("Error loading messages from Firebase:", error);
             messagesContainer.innerHTML = '<div class="system-message"><span>Error connecting to chat. Please check your connection.</span></div>';
         });
-
-        // Listen for new messages and handle errors
-        db.ref(messagesPath).orderByChild('timestamp').limitToLast(1).on('child_added', snapshot => {
-            try {
-                // Scroll to bottom when new message comes in only if near bottom
-                if (isNearBottom()) {
-                    scrollToBottom();
-                }
-            } catch (error) {
-                console.error("Error processing new message:", error);
-            }
-        }, error => {
-            console.error("Error listening for new messages:", error);
-        });
-    }
-
-    // Display message with appropriate formatting
-    function displayMessage(message, key) {
-        const isMyMessage = message.uid === currentUser.uid;
-        const messageClass = isMyMessage ? 'my-message' : 'others-message';
-
-        // Format timestamp
-        const timestamp = new Date(message.timestamp);
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        let timeString = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        let dateString = '';
-
-        if (timestamp.toDateString() === today.toDateString()) {
-            dateString = 'Today';
-        } else if (timestamp.toDateString() === yesterday.toDateString()) {
-            dateString = 'Yesterday';
-        } else {
-            dateString = timestamp.toLocaleDateString([], { day: 'numeric', month: 'short' });
-        }
-
-        // Check if we need to add a date separator
-        const lastDateEl = messagesContainer.querySelector('.message-date:last-child');
-        const lastDateString = lastDateEl ? lastDateEl.getAttribute('data-date') : '';
-
-        if (dateString !== lastDateString) {
-            const dateEl = document.createElement('div');
-            dateEl.className = 'message-date';
-            dateEl.setAttribute('data-date', dateString);
-            dateEl.innerHTML = `<span>${dateString}</span>`;
-            messagesContainer.appendChild(dateEl);
-        }
-
-        // Create message element
-        const messageEl = document.createElement('div');
-        messageEl.className = `message-row ${messageClass} ${message.deleted ? 'deleted' : ''}`;
-        messageEl.dataset.key = key;
-        messageEl.dataset.sender = message.uid;
-        messageEl.dataset.text = message.message;
-
-        // Check if this is a reply
-        let replyHtml = '';
-        if (message.replyTo) {
-            const replyToName = message.replyToName || 'User';
-            const replyToText = message.replyToText || '';
-            replyHtml = `
-                <div class="reply-container">
-                    <div class="reply-sender">${replyToName}</div>
-                    <div class="reply-text">${escapeHTML(replyToText)}</div>
-                </div>
-            `;
-        }
-
-        // Create avatar for other users' messages
-        let avatarHTML = '';
-        if (!isMyMessage) {
-            const avatarText = message.photoURL
-                ? `<img src="${message.photoURL}" alt="${message.displayName}" style="width:100%;height:100%;border-radius:50%;">`
-                : message.displayName.charAt(0).toUpperCase();
-
-            const avatarBg = message.photoURL ? 'transparent' : getRandomColor(message.uid);
-
-            avatarHTML = `
-                <div class="message-avatar" style="width:30px;height:30px;border-radius:50%;background-color:${avatarBg};color:white;display:inline-flex;justify-content:center;align-items:center;margin-right:8px;font-size:14px;">
-                    ${avatarText}
-                </div>
-            `;
-        }
-
-        // Add status indicators for own messages
-        let statusHtml = '';
-        if (isMyMessage) {
-            statusHtml = '<span class="message-status"><i class="fas fa-check-double"></i></span>';
-        }
-
-        // Handle deleted messages
-        let messageContent = message.deleted
-            ? '<span class="deleted-message">This message was deleted</span>'
-            : escapeHTML(message.message);
-
-        messageEl.innerHTML = `
-            <div class="message-group">
-                ${!isMyMessage ? `<div class="sender-name">${message.displayName}</div>` : ''}
-                <div style="display:flex;align-items:flex-end;${isMyMessage ? 'justify-content:flex-end;' : ''}">
-                    ${!isMyMessage ? avatarHTML : ''}
-                <div class="message-bubble">
-                        ${replyHtml}
-                        <div class="message-content">${messageContent}</div>
-                        <div class="message-time">${timeString}${statusHtml}</div>
-                </div>
-                </div>
-            </div>
-        `;
-
-        messagesContainer.appendChild(messageEl);
-
-        // Only allow interaction with non-deleted messages
-        if (!message.deleted) {
-            // Set up long press detection for message options
-            setupLongPress(messageEl.querySelector('.message-bubble'), key, isMyMessage);
-        }
     }
 
     // Online users tracking
@@ -440,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function escapeHTML(str) {
+        if (!str || typeof str !== 'string') return '';
         return str.replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
@@ -463,22 +1063,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Logout handler
-    document.getElementById('logout-btn').addEventListener('click', () => {
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
         auth.signOut().then(() => {
             window.location.href = 'login.html';
         }).catch(error => {
             console.error("Error signing out: ", error);
         });
     });
+    } else {
+        console.error("Logout button not found");
+    }
 
     // Check if user previously selected dark mode
     if (localStorage.getItem('darkMode') === 'enabled') {
         document.body.classList.add('dark-mode');
-        document.getElementById('theme-toggle').checked = true;
+        if (darkModeToggle) {
+            darkModeToggle.checked = true;
+        }
     }
 
     // Dark mode toggle
-    document.getElementById('theme-toggle').addEventListener('change', function () {
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('change', function () {
         if (this.checked) {
             document.body.classList.add('dark-mode');
             localStorage.setItem('darkMode', 'enabled');
@@ -487,23 +1095,36 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('darkMode', 'disabled');
         }
     });
+    } else {
+        console.error("Dark mode toggle button not found");
+    }
 
     // Make sure accent theme options are not active by default
+    if (accentThemeOptions) {
     accentThemeOptions.classList.remove('active');
+    } else {
+        console.error("accentThemeOptions element not found");
+    }
 
     // Toggle accent theme options
+    if (accentThemeToggle && accentThemeOptions && fontSettingsOptions) {
     accentThemeToggle.addEventListener('click', () => {
         accentThemeOptions.classList.toggle('active');
-        // Close font settings if open
         fontSettingsOptions.classList.remove('active');
     });
+    } else {
+        console.error("Could not attach listener to accentThemeToggle - one or more elements missing");
+    }
 
     // Toggle font settings options
+    if (fontSettingsToggle && fontSettingsOptions && accentThemeOptions) {
     fontSettingsToggle.addEventListener('click', () => {
         fontSettingsOptions.classList.toggle('active');
-        // Close accent theme if open
         accentThemeOptions.classList.remove('active');
     });
+    } else {
+        console.error("Could not attach listener to fontSettingsToggle - one or more elements missing");
+    }
 
     // Handle color selection
     colorOptions.forEach(option => {
@@ -523,46 +1144,13 @@ document.addEventListener('DOMContentLoaded', () => {
             applyAccentColor(color);
 
             // Close the color options dropdown after selection
+            if (accentThemeOptions) {
             setTimeout(() => {
                 accentThemeOptions.classList.remove('active');
             }, 300);
-        });
-    });
-
-    // Apply accent color to UI elements
-    function applyAccentColor(color) {
-        document.documentElement.style.setProperty('--accent-color', color);
-
-        // Apply color to interactive elements
-        const buttons = document.querySelectorAll('.btn-primary, .send-btn');
-        buttons.forEach(btn => {
-            btn.style.backgroundColor = color;
-        });
-
-        // Apply to other elements that need accent color
-        const accentElements = document.querySelectorAll('.active-tab, .radio-inner, .chat-avatar, .menu-user-avatar');
-        accentElements.forEach(el => {
-            el.style.backgroundColor = color;
-            if (color === '#ffffff') {
-                el.style.color = '#333'; // Dark text for white background
-            } else {
-                el.style.color = 'white'; // White text for colored backgrounds
             }
         });
-
-        // Apply to border elements
-        const borderElements = document.querySelectorAll('.font-radio.selected');
-        borderElements.forEach(el => {
-            el.style.borderColor = color;
-        });
-
-        // For chat-specific elements
-        const myMessageBubbles = document.querySelectorAll('.my-message .message-bubble');
-        myMessageBubbles.forEach(el => {
-            el.style.backgroundColor = color === '#ffffff' ? '#dcf8c6' : color;
-            el.style.color = color === '#ffffff' || color === '#dcf8c6' ? '#333' : 'white';
-        });
-    }
+    });
 
     // Handle font selection
     fontOptions.forEach(option => {
@@ -586,23 +1174,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Apply font to the entire app
-    function applyFont(font) {
-        document.body.style.fontFamily = `'${font}', sans-serif`;
-
-        // Also apply to all text elements for consistency
-        const textElements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, button, input, textarea, a, div');
-        textElements.forEach(el => {
-            el.style.fontFamily = `'${font}', sans-serif`;
-        });
-    }
-
     // Toggle settings section
+    if (settingsToggle && settingsSection) {
     settingsToggle.addEventListener('click', () => {
         settingsSection.classList.toggle('active');
     });
+    } else {
+        console.error("Settings toggle or section not found");
+    }
 
     // About Funchat handler
+    if (aboutFunChat && sideMenu && menuOverlay) {
     aboutFunChat.addEventListener('click', () => {
         // First close the side menu
         sideMenu.classList.remove('active');
@@ -614,121 +1196,47 @@ document.addEventListener('DOMContentLoaded', () => {
         aboutAIChatModal.style.opacity = '1';
         aboutAIChatModal.style.pointerEvents = 'auto';
     });
+    } else {
+        console.error("About funchat button, side menu or overlay not found");
+    }
 
     // Return to dashboard handler
+    if (returnDashboard) {
     returnDashboard.addEventListener('click', () => {
         window.location.href = 'dashboard.html';
     });
-
-    // Load saved settings
-    function loadSavedSettings() {
-        // Load accent color
-        const savedColor = localStorage.getItem('accentColor');
-        if (savedColor) {
-            // Mark the correct color as selected
-            colorOptions.forEach(opt => {
-                if (opt.getAttribute('data-color') === savedColor) {
-                    opt.classList.add('selected');
-                }
-            });
-            // Apply the color
-            applyAccentColor(savedColor);
         } else {
-            // Default is the first color
-            colorOptions[0].classList.add('selected');
-            applyAccentColor(colorOptions[0].getAttribute('data-color'));
-        }
-
-        // Load font
-        const savedFont = localStorage.getItem('selectedFont');
-        if (savedFont) {
-            // Mark the correct font as selected
-            fontOptions.forEach(opt => {
-                if (opt.getAttribute('data-font') === savedFont) {
-                    opt.querySelector('.font-radio').classList.add('selected');
-                }
-            });
-            // Apply the font
-            applyFont(savedFont);
-        } else {
-            // Default is the first font (Poppins)
-            fontOptions[0].querySelector('.font-radio').classList.add('selected');
-            applyFont(fontOptions[0].getAttribute('data-font'));
-        }
+        console.error("Return dashboard button not found");
     }
 
-    // Load saved settings when the page loads
-    loadSavedSettings();
-
     // Toggle appearance section
+    if (appearanceToggle && appearanceSection && appearanceArrow) {
     appearanceToggle.addEventListener('click', () => {
         appearanceSection.classList.toggle('active');
         appearanceArrow.classList.toggle('active');
     });
-
-    // Function to prepare a reply to a message
-    function prepareReply(name, text, messageId) {
-        // Store reply info for when message is sent
-        messageInput.dataset.replyTo = messageId;
-        messageInput.dataset.replyToName = name;
-        messageInput.dataset.replyToText = text;
-
-        // Show reply preview above input
-        const replyPreview = document.createElement('div');
-        replyPreview.className = 'reply-preview';
-        replyPreview.innerHTML = `
-            <div class="reply-container" style="margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div class="reply-sender">${name}</div>
-                    <div class="reply-text">${text.length > 30 ? text.substring(0, 30) + '...' : text}</div>
-                </div>
-                <i class="fas fa-times" id="cancel-reply" style="padding: 5px; cursor: pointer;"></i>
-            </div>
-        `;
-
-        // Remove existing preview if any
-        const existingPreview = document.querySelector('.reply-preview');
-        if (existingPreview) {
-            existingPreview.remove();
-        }
-
-        document.querySelector('.chat-input').insertAdjacentElement('beforebegin', replyPreview);
-
-        // Add event listener to cancel reply
-        document.getElementById('cancel-reply').addEventListener('click', function (e) {
-            e.stopPropagation();
-            cancelReply();
-        });
-
-        // Focus on input after preparing reply
-        messageInput.focus();
-    }
-
-    // Function to cancel reply
-    function cancelReply() {
-        const replyPreview = document.querySelector('.reply-preview');
-        if (replyPreview) {
-            replyPreview.remove();
-        }
-
-        // Clear reply data
-        delete messageInput.dataset.replyTo;
-        delete messageInput.dataset.replyToName;
-        delete messageInput.dataset.replyToText;
+    } else {
+        console.error("Appearance toggle, section or arrow not found");
     }
 
     // Toggle attachment options
-    const attachBtn = document.getElementById('attach-btn');
-    const attachmentOptions = document.getElementById('attachment-options');
-
+    if (attachBtn && attachmentOptions) {
     attachBtn.addEventListener('click', () => {
         attachmentOptions.classList.toggle('active');
     });
+    } else {
+        console.error("Attach button or options not found");
+    }
 
     // Hide attachment options when clicking elsewhere
     document.addEventListener('click', (e) => {
-        if (!attachBtn.contains(e.target) && !attachmentOptions.contains(e.target)) {
+        if (attachBtn && attachmentOptions && !attachBtn.contains(e.target) && !attachmentOptions.contains(e.target)) {
             attachmentOptions.classList.remove('active');
+        }
+        if (window.innerWidth <= 768) {
+            if (!sideMenu.contains(e.target) && e.target !== menuButton) {
+                sideMenu.classList.remove('active');
+            }
         }
     });
 
@@ -742,377 +1250,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Update read status (simulating WhatsApp double ticks)
-    function updateMessageStatus() {
-        // In a real app, you would update the status based on user interactions
-        // Here we'll just simulate all messages being read after 2 seconds
-        setTimeout(() => {
-            const myMessages = document.querySelectorAll('.my-message .message-status i');
-            myMessages.forEach(icon => {
-                icon.style.color = '#4FC3F7'; // Blue color for read messages
-            });
-        }, 2000);
-    }
-
-    // Call this after loading messages
-    document.addEventListener('DOMContentLoaded', () => {
-        // ... existing code ...
-
-        // After loading messages
-        loadMessages();
-        updateMessageStatus();
-
-        // Make messages clickable for reply
-        document.addEventListener('click', function (e) {
-            if (e.target.closest('.message-bubble') && !e.target.closest('.my-message')) {
-                const messageRow = e.target.closest('.message-row');
-                if (messageRow) {
-                    const sender = messageRow.dataset.sender;
-                    const text = messageRow.dataset.text;
-                    const key = messageRow.dataset.key;
-
-                    // Only allow replying to other people's messages
-                    if (sender !== currentUser.uid) {
-                        prepareReply(messageRow.querySelector('.sender-name').textContent, text, key);
-                    }
-                }
-            }
-        });
-    });
-
-    // Function to handle message deletion
-    function deleteMessage(key) {
-        // In a real app, you might want to consider different deletion strategies:
-        // 1. Complete removal from database (for your own messages only)
-        // 2. Setting a "deleted" flag (what we're doing here)
-        // 3. Keeping a log of deleted messages
-
-        db.ref(`messages/${key}`).update({
-            deleted: true,
-            message: "This message was deleted" // Optional: overwrite content for extra security
-        })
-            .then(() => {
-                // Success notification
-                showDeletedNotification();
-            })
-            .catch(error => {
-                console.error("Error deleting message: ", error);
-                alert("Failed to delete message. Please try again.");
-            });
-    }
-
-    // Setup long press detection for message options
-    function setupLongPress(element, messageKey, isMyMessage) {
-        let pressTimer;
-        let isLongPressing = false;
-
-        // On mouse/touch down, start the timer
-        const startPress = function (e) {
-            isLongPressing = false;
-            element.classList.add('pressing');
-
-            pressTimer = setTimeout(function () {
-                isLongPressing = true;
-                element.classList.remove('pressing');
-                showMessageOptions(e, messageKey, isMyMessage);
-            }, 500); // 500ms for long press
-        };
-
-        // On mouse/touch up, clear the timer
-        const endPress = function () {
-            element.classList.remove('pressing');
-            clearTimeout(pressTimer);
-        };
-
-        // On mouse/touch move, clear the timer
-        const cancelPress = function () {
-            if (!isLongPressing) {
-                element.classList.remove('pressing');
-                clearTimeout(pressTimer);
-            }
-        };
-
-        // Set up event listeners
-        element.addEventListener('mousedown', startPress);
-        element.addEventListener('touchstart', startPress);
-        element.addEventListener('mouseup', endPress);
-        element.addEventListener('mouseleave', cancelPress);
-        element.addEventListener('touchend', endPress);
-        element.addEventListener('touchcancel', endPress);
-        element.addEventListener('touchmove', cancelPress);
-
-        // Regular tap/click for reply (only for others' messages)
-        if (!isMyMessage) {
-            element.addEventListener('click', function (e) {
-                if (!isLongPressing) {
-                    // Get the message details
-                    const messageRow = element.closest('.message-row');
-                    prepareReply(
-                        messageRow.querySelector('.sender-name').textContent,
-                        messageRow.dataset.text,
-                        messageKey
-                    );
-                }
-            });
-        }
-    }
-
-    // Show message options menu
-    function showMessageOptions(event, messageKey, isMyMessage) {
-        const messageOptions = document.getElementById('message-options');
-        const deleteOption = messageOptions.querySelector('.delete-option');
-        const replyOption = messageOptions.querySelector('.reply-option');
-
-        // Position the options menu near the clicked message
-        const rect = event.target.getBoundingClientRect();
-        messageOptions.style.top = `${rect.top}px`;
-        messageOptions.style.left = `${rect.left + 50}px`;
-
-        // Show delete option only for your own messages
-        if (isMyMessage) {
-            deleteOption.style.display = 'flex';
-        } else {
-            deleteOption.style.display = 'none';
-        }
-
-        // Show the options menu
-        messageOptions.classList.add('active');
-        messageOptions.dataset.messageKey = messageKey;
-
-        // Add event listeners to options
-        replyOption.onclick = function () {
-            // Get the message details
-            const messageRow = document.querySelector(`.message-row[data-key="${messageKey}"]`);
-            const senderName = messageRow.querySelector('.sender-name')?.textContent || 'You';
-
-            prepareReply(
-                senderName,
-                messageRow.dataset.text,
-                messageKey
-            );
-
-            messageOptions.classList.remove('active');
-        };
-
-        deleteOption.onclick = function () {
-            if (confirm('Are you sure you want to delete this message?')) {
-                deleteMessage(messageKey);
-                messageOptions.classList.remove('active');
-            }
-        };
-
-        // Click outside to close
-        document.addEventListener('click', closeMessageOptions);
-    }
-
-    // Close message options menu
-    function closeMessageOptions(e) {
-        const messageOptions = document.getElementById('message-options');
-        if (!messageOptions.contains(e.target) && messageOptions.classList.contains('active')) {
-            messageOptions.classList.remove('active');
-            document.removeEventListener('click', closeMessageOptions);
-        }
-    }
-
-    // Show deleted message notification
-    function showDeletedNotification() {
-        const notification = document.createElement('div');
-        notification.className = 'custom-notification';
-        notification.textContent = 'Message deleted';
-
-        // Add styles
-        notification.style.position = 'fixed';
-        notification.style.top = '20px';
-        notification.style.left = '50%';
-        notification.style.transform = 'translateX(-50%)';
-        notification.style.backgroundColor = '#323232';
-        notification.style.color = 'white';
-        notification.style.padding = '10px 20px';
-        notification.style.borderRadius = '5px';
-        notification.style.zIndex = '1000';
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.3s ease';
-
-        // Add to body
-        document.body.appendChild(notification);
-
-        // Fade in
-        setTimeout(() => {
-            notification.style.opacity = '1';
-        }, 10);
-
-        // Remove after delay
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 2000);
-    }
-
-    // Profile settings handler
-    profileSettings.addEventListener('click', () => {
-        // First close the side menu
-        sideMenu.classList.remove('active');
-        menuOverlay.classList.remove('active');
-
-        // Only proceed if user is logged in
-        if (currentUser) {
-            // Update profile data in modal
-            displayUsername.textContent = currentUser.displayName || 'User';
-            displayEmail.textContent = currentUser.email || '';
-
-            // Update profile picture
-            updateProfilePicInModal();
-
-            // Show the modal
-            profileSettingsModal.style.display = 'flex';
-            profileSettingsModal.style.opacity = '1';
-            profileSettingsModal.style.pointerEvents = 'auto';
-        }
-    });
-
-    // Update profile picture in the modal
-    function updateProfilePicInModal() {
-        if (currentUser.photoURL) {
-            profilePicContainer.innerHTML = `<img src="${currentUser.photoURL}" alt="${currentUser.displayName}" style="width:100%; height:100%; object-fit:cover;">`;
-        } else {
-            // Use first letter of display name as avatar
-            const initials = (currentUser.displayName || 'User').charAt(0).toUpperCase();
-            profilePicContainer.innerHTML = initials;
-        }
-    }
-
-    // Handle profile picture change
-    changeProfilePicBtn.addEventListener('click', () => {
-        profilePicInput.click();
-    });
-
-    profilePicInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // Create storage reference
-            const storageRef = firebase.storage().ref();
-            const profilePicRef = storageRef.child(`profile_pics/${currentUser.uid}`);
-
-            // Show loading state
-            profilePicContainer.innerHTML = `<div class="spinner" style="border:3px solid rgba(255,255,255,0.3); border-radius:50%; border-top:3px solid white; width:30px; height:30px; animation:spin 1s linear infinite;"></div>`;
-
-            // Upload file
-            profilePicRef.put(file).then(snapshot => {
-                return snapshot.ref.getDownloadURL();
-            }).then(downloadURL => {
-                // Update profile
-                return currentUser.updateProfile({
-                    photoURL: downloadURL
-                });
-            }).then(() => {
-                // Update UI
-                updateProfilePicInModal();
-                updateUserInfo(currentUser);
-
-                // Show success notification
-                alert('Profile picture updated successfully!');
-            }).catch(error => {
-                console.error('Error updating profile picture:', error);
-                alert('Failed to update profile picture. Please try again.');
-                updateProfilePicInModal();
-            });
-        }
-    });
-
-    // Close profile modal when clicking the X button
-    if (closeProfileBtn) {
-        closeProfileBtn.addEventListener('click', () => {
-            closeProfileModal();
-        });
-    }
-
-    // Close profile modal when clicking outside the modal
-    if (profileSettingsModal) {
-        profileSettingsModal.addEventListener('click', (e) => {
-            if (e.target === profileSettingsModal) {
-                closeProfileModal();
-            }
-        });
-    }
-
-    // Edit username when clicking the edit button
-    if (editUsernameBtn) {
-        editUsernameBtn.addEventListener('click', () => {
-            const currentName = displayUsername.textContent;
-            const newName = prompt('Enter new username:', currentName);
-
-            if (newName && newName.trim() !== '' && newName !== currentName) {
-                // Update all UI elements with the new username
-                updateUsernameEverywhere(newName, currentName);
-            }
-        });
-    }
-
-    // Function to update username in all places
-    function updateUsernameEverywhere(newName, oldName) {
-        // Update in the profile modal
-        displayUsername.textContent = newName;
-
-        // Update in the side menu (note: usernameEl is the username element with id="username")
-        if (usernameEl) {
-            usernameEl.textContent = newName;
-        }
-
-        // Update Firebase Auth profile and Database
-        const user = firebase.auth().currentUser;
-        if (user) {
-            // First update the Auth profile
-            user.updateProfile({
-                displayName: newName
-            }).then(() => {
-                // Then update the username in the database
-                const userId = user.uid;
-                return firebase.database().ref('users/' + userId).update({
-                    username: newName
-                });
-            }).then(() => {
-                showNotification('Username updated successfully!', 'success');
-            }).catch((error) => {
-                console.error('Error updating username:', error);
-
-                // Revert UI changes on error
-                displayUsername.textContent = oldName;
-                if (usernameEl) {
-                    usernameEl.textContent = oldName;
-                }
-
-                showNotification('Error updating username: ' + error.message, 'error');
-            });
-        }
-    }
-
-    // Logout when clicking the logout button
-    if (logoutProfileBtn) {
-        logoutProfileBtn.addEventListener('click', () => {
-            firebase.auth().signOut().then(() => {
-                window.location.href = 'login.html';
-            }).catch(error => {
-                console.error("Error signing out: ", error);
-            });
-        });
-    }
-
-    // Side menu toggle on mobile devices
-    document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 768) {
-            if (!sideMenu.contains(e.target) && e.target !== menuButton) {
-                sideMenu.classList.remove('active');
-            }
-        }
-    });
-
-    // Typing indicator variables
-    const typingIndicator = document.getElementById('typing-indicator');
-    const typingUsername = document.getElementById('typing-username');
-
-    // Add event listener for typing
+    // Typing indicator listener
+    if (messageInput) {
     messageInput.addEventListener('input', () => {
         // Only send typing status if there's content in the input
         if (messageInput.value.trim().length > 0) {
@@ -1132,15 +1271,8 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(typingTimeout);
         }
     });
-
-    // Function to update typing status in Firebase
-    function updateTypingStatus(isTyping) {
-        if (currentUser) {
-            db.ref(`typing/${currentUser.uid}`).set(isTyping ? {
-                displayName: currentUser.displayName || 'Anonymous',
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            } : null);
-        }
+    } else {
+        console.error("Message input element not found");
     }
 
     // Listen for changes in typing status
@@ -1171,6 +1303,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Clear typing status when user disconnects
     db.ref(`typing/${currentUser?.uid}`).onDisconnect().remove();
+
+    // --- Add references for the new confirmation modal ---
+    const deleteConfirmationModal = document.getElementById('delete-for-me-confirmation-modal');
+    const cancelDeleteForMeBtn = document.getElementById('cancel-delete-for-me');
+    const confirmDeleteForMeBtn = document.getElementById('confirm-delete-for-me');
+
+    // --- Add listeners for the new modal buttons ---
+    if (cancelDeleteForMeBtn) {
+        console.log("Attaching listener to Cancel button");
+        cancelDeleteForMeBtn.addEventListener('click', () => {
+            console.log("Cancel button clicked");
+            hideConfirmationModal();
+        });
+    } else {
+        console.error("Cancel button not found");
+    }
+
+    if (confirmDeleteForMeBtn) {
+        console.log("Attaching listener to Confirm Delete button");
+        confirmDeleteForMeBtn.addEventListener('click', () => {
+            console.log("Confirm Delete button clicked. Element to delete:", elementToDeleteForMe);
+            if (elementToDeleteForMe) {
+                deletePlaceholderForMe(elementToDeleteForMe);
+            } else {
+                console.error("elementToDeleteForMe is null when confirm button clicked");
+            }
+            hideConfirmationModal();
+        });
+    } else {
+        console.error("Confirm Delete button not found");
+    }
+
+    // Close modal if overlay is clicked
+    if (deleteConfirmationModal) {
+        console.log("Attaching listener to Modal Overlay");
+        deleteConfirmationModal.addEventListener('click', (e) => {
+            if (e.target === deleteConfirmationModal) {
+                console.log("Modal overlay clicked");
+                hideConfirmationModal();
+            }
+        });
+    } else {
+        console.error("Delete confirmation modal overlay not found");
+    }
+
+    loadSavedSettings(); // Load settings once DOM is ready
 });
 
 // About Global Chat Modal functionality
@@ -1239,7 +1417,7 @@ function loadUserProfile() {
         const username = user.displayName || user.email.split('@')[0];
         displayUsername.textContent = username;
 
-        // Set profile picture or initials
+        // Set profile pic if the element exists
         if (user.photoURL) {
             profilePicContainer.innerHTML = `<img src="${user.photoURL}" alt="Profile" style="width:100%; height:100%; object-fit:cover;">`;
         } else {
