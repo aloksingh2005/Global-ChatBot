@@ -777,74 +777,126 @@ input:checked+.switch-slider:after {
     border-radius: 10px;
 }
 
-/* Add message delete styles */
+/* Message Options Menu */
 .message-options {
-    position: absolute;
-    background-color: var(--chat-input-container);
-    border-radius: 10px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-    padding: 0;
-    z-index: 100;
+    position: fixed;
+    background-color: #2d2d2d;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
     display: none;
+    flex-direction: column;
+    width: 170px;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .message-options.active {
-    display: block;
+    display: flex;
+    transform: scale(1);
+    opacity: 1;
 }
 
-.message-option {
-    padding: 12px 15px;
-    cursor: pointer;
+.message-options .option {
     display: flex;
     align-items: center;
-    transition: background-color 0.2s;
-    min-width: 100px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
-.message-option:hover {
-    background-color: var(--hover-bg);
+.message-options .option:hover {
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
-.message-option i {
+.message-options .option i {
     margin-right: 10px;
+    font-size: 16px;
     width: 20px;
     text-align: center;
 }
 
-.message-option.delete {
-    color: #F44336;
+.message-options .delete-option {
+    color: #ff6b6b;
 }
 
-.deleted-message {
-    font-style: italic;
-    color: var(--secondary-text);
+.message-options .delete-option:hover {
+    background-color: rgba(255, 107, 107, 0.1);
 }
 
-.message-row.deleted .message-content {
-    text-decoration: line-through;
-    opacity: 0.7;
+.message-options .reply-option {
+    color: #4cd137;
 }
 
-/* Long press styles */
+.message-options .reply-option:hover {
+    background-color: rgba(76, 209, 55, 0.1);
+}
+
+.message-options .react-option {
+    color: #f0c419;
+}
+
+.message-options .react-option:hover {
+    background-color: rgba(240, 196, 25, 0.1);
+}
+
+/* Message long press styling */
 .message-bubble.pressing {
-    background-color: var(--hover-bg);
+    transform: scale(0.98);
+    opacity: 0.9;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-/* Remove existing profile settings modal styles */
-.modal-overlay,
-.profile-modal,
-.profile-modal-header,
-.profile-modal-title,
-.profile-modal-close,
-.profile-modal-body,
-.profile-field,
-.profile-field-label,
-.profile-field-value,
-.profile-edit-button,
-.profile-modal-footer,
-.logout-button {
-    /* Remove these styles by setting them to their initial values */
-    all: initial;
+/* Emoji Picker in reaction mode */
+.emoji-picker.reaction-mode {
+    max-width: 280px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.emoji-picker.reaction-mode .emoji {
+    font-size: 20px;
+    padding: 8px;
+}
+
+/* Message reactions container */
+.message-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.reaction {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.reaction:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.reaction.active {
+    background: rgba(106, 17, 203, 0.3);
+    border: 1px solid rgba(106, 17, 203, 0.5);
+}
+
+.reaction .emoji {
+    margin-right: 4px;
+}
+
+.reaction .count {
+    font-size: 11px;
+    opacity: 0.8;
 }
 
 /* Add new clean profile settings modal styles */
