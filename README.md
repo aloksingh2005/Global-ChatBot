@@ -15,6 +15,14 @@ A modern mobile-friendly chat application with beautiful UI and user authenticat
 1. Clone this repository or download the files to your computer.
 2. Open the folder in your code editor.
 3. No special dependencies are required as this is a pure HTML/CSS/JS project.
+4. Configure Firebase in `js/firebase-config.js` and replace `REPLACE_WITH_NEW_RESTRICTED_API_KEY` with your rotated API key.
+
+## Security Note (Important)
+
+- If an API key was leaked publicly, rotate it immediately in Google Cloud Console.
+- Restrict key usage by API (allow only required Firebase APIs) and HTTP referrers (your domains only).
+- Keep Firebase Security Rules strict; never rely on API key secrecy for database protection.
+- This repository now uses centralized config in `js/firebase-config.js` to avoid hardcoded keys inside multiple scripts.
 
 ## Running the App
 
