@@ -62,4 +62,21 @@ You can easily customize this app by:
 - Implement a real backend for user authentication
 - Add password recovery functionality
 - Add remember me feature
-- Add dark/light mode toggle 
+- Add dark/light mode toggle
+
+## Free Real-Time Messaging Ideas
+
+If you want real-time chat with zero or low cost, these are practical options:
+
+- Firebase Realtime Database (Spark free tier) - easiest for web chat and presence.
+- Supabase Realtime (free tier) - Postgres + realtime subscriptions.
+- Appwrite Realtime (self-hosted or cloud free tier) - good open-source option.
+- Socket.IO on Render/Railway free plan - full custom server control.
+
+## Implemented in this project
+
+This project now uses a more reliable Firebase Realtime Database flow:
+
+- Backward-compatible message schema (`text/message`, `sender/displayName`) so old and new messages both render.
+- Room-scoped typing channels (`typing/global` and `typing/rooms/{roomId}`) so typing status does not leak across rooms.
+- Stable message rendering for existing data while keeping the current UI and auth flow unchanged.
