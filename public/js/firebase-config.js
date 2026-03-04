@@ -1,5 +1,5 @@
 window.APP_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyATwGLZ0Awj6KSr-17bEEs2-HjTs70huV0",
+  apiKey: "AIzaSyBFBddgcyGzlbZdY5THBv2s0kCWZG8qNb8",
   authDomain: "ai-chatbot-a0107.firebaseapp.com",
   databaseURL: "https://ai-chatbot-a0107-default-rtdb.firebaseio.com",
   projectId: "ai-chatbot-a0107",
