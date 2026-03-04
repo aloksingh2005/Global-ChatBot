@@ -1,0 +1,640 @@
+:root {
+    /* Light mode variables */
+    --bg-color-light: #f2f2f2;
+    --card-bg-light: white;
+    --text-color-light: #333;
+    --secondary-text-light: #777;
+    --border-color-light: rgba(0, 0, 0, 0.1);
+    --hover-bg-light: rgba(0, 0, 0, 0.03);
+    
+    /* Dark mode variables */
+    --bg-color-dark: #1a1a2e;
+    --card-bg-dark: #242447;
+    --text-color-dark: #e0e0e0;
+    --secondary-text-dark: #a0a0a0;
+    --border-color-dark: rgba(255, 255, 255, 0.1);
+    --hover-bg-dark: rgba(255, 255, 255, 0.05);
+    
+    /* Default to light mode */
+    --bg-color: var(--bg-color-light);
+    --card-bg: var(--card-bg-light);
+    --text-color: var(--text-color-light);
+    --secondary-text: var(--secondary-text-light);
+    --border-color: var(--border-color-light);
+    --hover-bg: var(--hover-bg-light);
+}
+
+/* Dark mode class */
+body.dark-mode {
+    --bg-color: var(--bg-color-dark);
+    --card-bg: var(--card-bg-dark);
+    --text-color: var(--text-color-dark);
+    --secondary-text: var(--secondary-text-dark);
+    --border-color: var(--border-color-dark);
+    --hover-bg: var(--hover-bg-dark);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    height: 100vh;
+    position: relative;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header h1 {
+    font-size: 28px;
+    margin: 0;
+    font-style: italic;
+    text-align: center;
+    flex: 1;
+}
+
+.menu-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-text);
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.menu-button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.chat-rooms {
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.chat-room {
+    display: flex;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.chat-room:hover {
+    background-color: var(--hover-bg);
+}
+
+.chat-room:last-child {
+    border-bottom: none;
+}
+
+.room-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #2196F3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 15px;
+    color: white;
+    font-size: 20px;
+}
+
+.room-details {
+    flex: 1;
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.room-name {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.last-message-time {
+    font-size: 12px;
+    color: var(--secondary-text);
+}
+
+.last-message {
+    display: flex;
+    font-size: 14px;
+    color: var(--secondary-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.message-sender {
+    font-weight: 500;
+    margin-right: 5px;
+}
+
+.logout-btn {
+    margin-left: auto;
+}
+
+.creator-tag {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 14px;
+    color: var(--secondary-text);
+}
+
+.creator-heart {
+    color: #ff3366;
+}
+
+.theme-switch {
+    margin-left: 15px;
+}
+
+.theme-switch label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    width: 50px;
+    height: 26px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 100px;
+    position: relative;
+    transition: background-color 0.2s;
+    padding: 3px;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.theme-switch .switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.theme-switch input:checked + .switch-slider {
+    background-color: #2196F3;
+}
+
+.theme-switch input:checked + .switch-slider:before {
+    transform: translateX(20px);
+}
+
+.theme-switch input:checked + .switch-slider:after {
+    content: "ON";
+    left: 7px;
+    right: auto;
+}
+
+.theme-switch .switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.theme-switch .switch-slider:after {
+    position: absolute;
+    content: "OFF";
+    right: 5px;
+    bottom: 3px;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+/* Spinner animation for profile pic upload */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Side menu styles */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100%;
+    background-color: var(--card-bg);
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+.side-menu.active {
+    left: 0;
+}
+
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    display: none;
+}
+
+.menu-overlay.active {
+    display: block;
+}
+
+.menu-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px;
+}
+
+.menu-close {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--secondary-text);
+}
+
+.menu-user-section {
+    padding: 20px;
+    text-align: center;
+}
+
+.menu-user-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #2196F3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 36px;
+    margin: 0 auto 15px;
+    overflow: hidden;
+}
+
+.menu-user-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.menu-user-email {
+    font-size: 14px;
+    color: var(--secondary-text);
+}
+
+.menu-divider {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 10px 0;
+}
+
+.menu-item {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.menu-item i {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+    color: var(--secondary-text);
+}
+
+/* Font and color selection styles */
+.accent-theme-options {
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 15px 20px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.accent-theme-options.active {
+    display: grid;
+    max-height: 100px;
+}
+
+.color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+}
+
+.color-option.selected {
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2196F3;
+}
+
+.font-settings-options {
+    padding: 5px 20px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.font-settings-options.active {
+    max-height: 300px;
+}
+
+.font-option {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    cursor: pointer;
+}
+
+.font-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--secondary-text);
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.font-radio .radio-inner {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #2196F3;
+    display: none;
+}
+
+.font-radio.selected {
+    border-color: #2196F3;
+}
+
+.font-radio.selected .radio-inner {
+    display: block;
+}
+
+/* Collapsible appearance section */
+.menu-item {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.appearance-arrow {
+    font-size: 12px;
+    transition: transform 0.3s;
+}
+
+.appearance-arrow.active {
+    transform: rotate(180deg);
+}
+
+.appearance-section {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.appearance-section.active {
+    max-height: 500px;
+}
+
+/* Collapsible settings section */
+.settings-section {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.settings-section.active {
+    max-height: 500px;
+}
+
+.theme-toggle-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+.section-header {
+    padding: 0 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--secondary-text);
+    margin: 10px 0;
+    letter-spacing: 0.5px;
+}
+
+.logout-container {
+    margin-top: 20px;
+    margin-bottom: 5px;
+}
+
+/* Spinner animation for profile pic upload */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.switch-slider:after {
+    position: absolute;
+    content: "OFF";
+    right: 5px;
+    bottom: 3px;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+input:checked + .switch-slider {
+    background-color: #2196F3;
+}
+
+input:checked + .switch-slider:before {
+    transform: translateX(20px);
+}
+
+input:checked + .switch-slider:after {
+    content: "ON";
+    left: 7px;
+    right: auto;
+}
+
+/* Floating Action Button Style */
+.floating-action-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #2196F3;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 100;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.floating-action-button::after {
+    content: "New Chat";
+    position: absolute;
+    right: 70px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s;
+}
+
+.floating-action-button:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+.floating-action-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.floating-action-button:active {
+    transform: scale(0.95);
+}
+
+/* Room Icon Option Styles */
+.room-icon-option {
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.room-icon-option:hover {
+    transform: scale(1.1);
+}
+
+.room-icon-option.selected {
+    border: 2px solid #2196F3 !important;
+}
+
+.room-icon-option.selected i {
+    color: #2196F3 !important;
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Chat - Login</title>
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="login-container">
+            <h1>Login</h1>
+            <form id="login-form">
+                <div class="input-group">
+                    <span class="icon"><i class="fas fa-envelope"></i></span>
+                    <input type="email" id="email" placeholder="Email" required>
+                </div>
+
+                <div class="input-group">
+                    <span class="icon"><i class="fas fa-lock"></i></span>
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
+
+                <div class="forgot-password">
+                    <a href="#" id="forgot-password-link">Forgot password?</a>
+                </div>
+
+                <div id="error-message" class="error-message"></div>
+
+                <button type="submit" class="btn-signup">Login</button>
+
+                <div class="social-login">
+                    <p>Or login with</p>
+                    <div class="social-icons">
+                        <div class="social-icon" id="google-login">
+                            <i class="fab fa-google" style="color: white;"></i>
+                        </div>
+                        <div class="social-icon" id="facebook-login">
+                            <i class="fab fa-facebook-f" style="color: white;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="signup-link">
+                    <p>Don't have an account? <a href="signup.html" id="signup-link">Sign Up</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+<script src="js/firebase-config.js"></script>
+<script src="js/login.js"></script>
+
+</body>
+
+</html>

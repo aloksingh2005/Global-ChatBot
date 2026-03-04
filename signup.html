@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Chat - Create Account</title>
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="signup-container">
+            <h1>Create Account</h1>
+            <form id="signup-form">
+                <div class="input-group">
+                    <span class="icon"><i class="fas fa-user"></i></span>
+                    <input type="text" id="username" placeholder="Full Name" required>
+                </div>
+                
+                <div class="input-group">
+                    <span class="icon"><i class="fas fa-envelope"></i></span>
+                    <input type="email" id="email" placeholder="Email" required>
+                </div>
+                
+                <div class="input-group">
+                    <span class="icon"><i class="fas fa-lock"></i></span>
+                    <input type="password" id="password" placeholder="Password (min 6)" minlength="6" required>
+                </div>
+                
+                <div id="error-message" class="error-message"></div>
+                
+                <button type="submit" class="btn-signup">Sign Up</button>
+                
+                <div class="social-login">
+                    <p>Or sign up with</p>
+                    <div class="social-icons">
+                        <div class="social-icon" id="google-signup">
+                            <i class="fab fa-google" style="color: white;"></i>
+                        </div>
+                        <div class="social-icon" id="facebook-signup">
+                            <i class="fab fa-facebook-f" style="color: white;"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="login-link">
+                    <p>Have account? <a href="login.html" id="login-link">Login</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/signup.js"></script>
+</body>
+</html> 
